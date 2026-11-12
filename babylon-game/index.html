@@ -1,31 +1,126 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" translate="no">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="google" content="notranslate">
 <title>Feuer gegen Wasser</title>
 <link rel="icon" href="data:,">
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #14161c; }
+  :root { --ink: #f3f6fb; --dim: #b9c3d6; --panel: rgba(16,20,28,.72); --fire: #ffb02e; --water: #5cc0ff; --tree: #6fd86a; --bad: #ff6b5e; --gold: #ffd54a; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1410; }
+  body { font: 15px/1.4 ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif; color: var(--ink); }
   #c { width: 100vw; height: 100vh; display: block; outline: none; touch-action: none; }
-  .ui { position: fixed; color: #e6ebf5; font: 15px/1.4 system-ui, sans-serif; pointer-events: none; }
-  #top { top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
-  #top span { background: rgba(20,22,28,.72); padding: 7px 14px; border-radius: 10px; white-space: nowrap; }
-  #top b { color: #fff; font-size: 18px; }
-  #hint { left: 14px; bottom: 12px; background: rgba(20,22,28,.65); padding: 8px 12px; border-radius: 8px; max-width: 46ch; font-size: 13px; }
-  #hint b { color: #fff; }
-  #msg { inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; background: rgba(10,12,18,.55); }
-  #msg.show { display: flex; }
-  #msg h1 { margin: 0 0 8px; font-size: clamp(30px, 6vw, 64px); }
-  #msg p { margin: 0; font-size: clamp(16px, 2.4vw, 26px); opacity: .9; }
-  #msg.win h1 { color: #ffd54a; } #msg.lose h1 { color: #ff6b5e; }
+  .ui { position: fixed; pointer-events: none; user-select: none; }
+  #vignette { inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.42) 100%); }
+  #flash { inset: 0; background: #fff; opacity: 0; }
+
+  /* obere Leiste */
+  #hud { top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: stretch; transition: opacity .3s; }
+  #hud.off, #keys.off { opacity: 0; }
+  #hud .pill { background: var(--panel); padding: 6px 13px; border-radius: 12px; white-space: nowrap; display: flex; align-items: center; gap: 7px; backdrop-filter: blur(4px); }
+  #hud .lbl { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  #hud b { font-size: 19px; font-variant-numeric: tabular-nums; }
+  #hud img { height: 22px; width: auto; display: block; }
+  #lives img { height: 20px; margin-right: 1px; } #lives img.gone { opacity: .22; filter: grayscale(1); }
+  #combo { color: var(--gold); font-weight: 700; min-width: 2.2em; opacity: 0; transition: opacity .25s; } #combo.on { opacity: 1; }
+  #treesPill.warn { animation: warn .5s infinite alternate; }
+  @keyframes warn { from { background: var(--panel); } to { background: rgba(200,40,30,.85); } }
+  #rules { gap: 4px !important; } #rules img { height: 20px; } #rules i { color: var(--dim); font-style: normal; font-size: 13px; }
+
+  #keys { left: 12px; bottom: 10px; color: var(--dim); font-size: 12px; background: rgba(16,20,28,.5); padding: 5px 10px; border-radius: 8px; transition: opacity .3s; }
+  #keys b { color: var(--ink); font-weight: 600; }
+
+  /* Hinweise und Banner */
+  #hint { left: 50%; bottom: 46px; transform: translateX(-50%); text-align: center; background: var(--panel); padding: 10px 18px; border-radius: 14px; max-width: 90vw; opacity: 0; transition: opacity .4s; }
+  #hint.on { opacity: 1; } #hint b { display: block; font-size: 20px; color: var(--gold); } #hint span { color: var(--dim); }
+  #arrow { inset: 0; width: 100vw; height: 100vh; opacity: 0; transition: opacity .4s; } #arrow.on { opacity: 1; }
+  #arrow path { fill: none; stroke: var(--gold); stroke-width: 4; stroke-dasharray: 10 9; stroke-linecap: round; animation: dash .6s linear infinite; }
+  #arrow polygon { fill: var(--gold); }
+  @keyframes dash { to { stroke-dashoffset: -19; } }
+  #lastTree { transform: translate(-50%, -100%); background: rgba(200,40,30,.9); padding: 2px 9px; border-radius: 8px; font-weight: 700; font-size: 13px; white-space: nowrap; display: none; animation: bob .45s infinite alternate; }
+  @keyframes bob { from { margin-top: 0; } to { margin-top: -5px; } }
+  .pop { position: fixed; pointer-events: none; transform: translate(-50%, -50%); font-weight: 800; font-size: 22px; color: var(--gold); text-shadow: 0 2px 0 rgba(0,0,0,.55); animation: pop 1s ease-out forwards; white-space: nowrap; }
+  .pop.small { font-size: 16px; color: #fff; } .pop.bad { color: var(--bad); }
+  @keyframes pop { 0% { opacity: 0; margin-top: 8px; scale: .6; } 15% { opacity: 1; scale: 1.15; } 30% { scale: 1; } 100% { opacity: 0; margin-top: -46px; } }
+
+  #banner { left: 0; right: 0; top: 11%; text-align: center; opacity: 0; transition: opacity .25s; }
+  #banner.on { opacity: 1; }
+  #banner h1 { margin: 0; font-size: clamp(34px, 6.4vw, 78px); line-height: 1.05; letter-spacing: .01em; text-shadow: 0 4px 0 rgba(0,0,0,.45), 0 0 34px rgba(0,0,0,.5); }
+  #banner p { margin: 8px 0 0; font-size: clamp(16px, 2.2vw, 26px); text-shadow: 0 2px 0 rgba(0,0,0,.6); }
+  #banner .stars { font-size: clamp(30px, 5vw, 60px); letter-spacing: .12em; color: var(--gold); text-shadow: 0 3px 0 rgba(0,0,0,.45); }
+  #banner .stars i { font-style: normal; color: rgba(255,255,255,.25); }
+  #banner small { display: block; margin-top: 12px; color: var(--dim); font-size: 15px; }
+  #banner.level h1 { color: #fff; } #banner.win h1 { color: var(--gold); } #banner.lose h1 { color: var(--bad); } #banner.finale h1 { color: var(--fire); }
+
+  /* Bildschirme */
+  .screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; background: rgba(8,12,10,.62); padding: 20px; box-sizing: border-box; }
+  .screen.on { display: flex; }
+  .screen h1 { margin: 0 0 6px; font-size: clamp(40px, 8vw, 96px); line-height: 1; background: linear-gradient(90deg, #ff5a36, #ffb02e 45%, #5cc0ff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.4)); }
+  .screen h2 { margin: 0 0 10px; font-size: clamp(32px, 6vw, 70px); }
+  .screen p { margin: 6px 0; max-width: 62ch; font-size: clamp(14px, 1.7vw, 19px); color: var(--dim); }
+  .screen p b { color: var(--ink); }
+  .cards { display: flex; gap: 14px; margin: 22px 0 14px; flex-wrap: wrap; justify-content: center; }
+  .card { background: var(--panel); border-radius: 16px; padding: 14px 18px 12px; min-width: 190px; }
+  .card div { display: flex; align-items: flex-end; justify-content: center; gap: 12px; height: 74px; }
+  .card img { height: 66px; width: auto; animation: sway 1.6s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+  .card img:last-of-type { animation-delay: -.8s; height: 54px; opacity: .85; }
+  .card i { font-style: normal; font-size: 26px; color: var(--gold); align-self: center; }
+  .card span { display: block; margin-top: 8px; font-weight: 700; font-size: 16px; }
+  @keyframes sway { from { transform: rotate(-5deg) scaleY(.97); } to { transform: rotate(5deg) scaleY(1.03); } }
+  .go { margin-top: 20px !important; font-size: clamp(18px, 2.4vw, 28px) !important; color: var(--gold) !important; font-weight: 800; animation: pulse .9s ease-in-out infinite alternate; }
+  @keyframes pulse { from { opacity: .55; } to { opacity: 1; } }
+  .best { color: var(--ink) !important; } .new { color: var(--gold) !important; font-weight: 800; }
+  kbd { font: inherit; background: rgba(255,255,255,.14); border-radius: 6px; padding: 1px 7px; color: var(--ink); }
 </style>
 </head>
 <body>
 <canvas id="c" tabindex="0"></canvas>
-<div id="top" class="ui"><span>🏆 Siege: <b id="wins">0</b></span><span>🌳 Bäume: <b id="trees">0</b></span><span>💧 Wasser: <b id="waters">0</b></span></div>
-<div id="hint" class="ui"><b>Pfeiltasten</b> / <b>WASD</b>: Feuer bewegen · <b>F</b>: Vollbild<br>Bäume fliehen vor dir und zerstören sich, wenn du sie berührst. Sonst jagen sie das Wasser, und das Wasser flieht vor ihnen. Wenn dich Wasser berührt, startet das Spiel neu.</div>
-<div id="msg" class="ui"><h1 id="msgTitle"></h1><p id="msgSub"></p></div>
+<div id="vignette" class="ui"></div>
+<div id="flash" class="ui"></div>
+<svg id="arrow" class="ui"><path id="arrowLine" d=""/><polygon id="arrowHead" points=""/></svg>
+<div id="lastTree" class="ui">Letzter Baum!</div>
+
+<div id="hud" class="ui off">
+  <div class="pill"><span class="lbl">Level</span><b id="level">1</b></div>
+  <div class="pill" id="lives"></div>
+  <div class="pill"><span class="lbl">Punkte</span><b id="score">0</b><span id="combo"></span></div>
+  <div class="pill" id="treesPill"><img data-icon="tree" alt="Bäume"><b id="trees">0</b></div>
+  <div class="pill"><img data-icon="water" alt="Wasser"><b id="waters">0</b></div>
+  <div class="pill" id="rules" title="Feuer verbrennt Baum · Baum trinkt Wasser · Wasser löscht Feuer">
+    <img data-icon="fire" alt="Feuer"><i>›</i><img data-icon="tree" alt="Baum"><i>›</i><img data-icon="water" alt="Wasser"><i>›</i><img data-icon="fire" alt="Feuer">
+  </div>
+</div>
+<div id="keys" class="ui off"><b>Pfeiltasten</b> / <b>WASD</b> bewegen · <b>P</b> Pause · <b>R</b> Neustart · <b>M</b> Ton <span id="muted"></span> · <b>F</b> Vollbild</div>
+<div id="hint" class="ui"><b id="hintTitle"></b><span id="hintSub"></span></div>
+<div id="banner" class="ui"><h1 id="bannerTitle"></h1><div class="stars" id="bannerStars"></div><p id="bannerSub"></p><small id="bannerNote"></small></div>
+
+<div id="title" class="screen">
+  <h1>Feuer gegen Wasser</h1>
+  <p><b>Du bist das Feuer.</b> Bleib als Einziger übrig.</p>
+  <div class="cards">
+    <div class="card"><div><img data-icon="fire" alt=""><i>›</i><img data-icon="tree" alt=""></div><span>Feuer verbrennt Baum</span></div>
+    <div class="card"><div><img data-icon="tree" alt=""><i>›</i><img data-icon="water" alt=""></div><span>Baum trinkt Wasser</span></div>
+    <div class="card"><div><img data-icon="water" alt=""><i>›</i><img data-icon="fire" alt=""></div><span>Wasser löscht Feuer</span></div>
+  </div>
+  <p><b>Lock das Wasser zu den Bäumen.</b> Die Bäume haben Angst vor dir, aber sie springen auf jedes Wasser, das ihnen zu nahe kommt.</p>
+  <p>Ist alles Wasser weg, verbrenne die Bäume. Verbrennst du den <b>letzten Baum zu früh</b>, hast du verloren.</p>
+  <p><kbd>Pfeiltasten</kbd> oder <kbd>WASD</kbd> bewegen · <kbd>P</kbd> Pause · <kbd>R</kbd> Neustart · <kbd>M</kbd> Ton · <kbd>F</kbd> Vollbild</p>
+  <p class="best" id="titleBest"></p>
+  <p class="go">Leertaste zum Starten</p>
+</div>
+<div id="over" class="screen">
+  <h2>Spiel vorbei</h2>
+  <p class="best" id="overResult"></p>
+  <p class="new" id="overNew"></p>
+  <p id="overBest"></p>
+  <p class="go">Leertaste: noch mal</p>
+</div>
+<div id="pause" class="screen">
+  <h2>Pause</h2>
+  <p><kbd>P</kbd> oder <kbd>Esc</kbd> weiter · <kbd>R</kbd> Level neu starten · <kbd>M</kbd> Ton · <kbd>F</kbd> Vollbild</p>
+</div>
+
 <script src="babylon.js"></script>
 <script src="js/assets.js"></script>
 <script src="js/config.js"></script>
@@ -35,6 +130,9 @@
 <script src="js/sim/water-ai.js"></script>
 <script src="js/view/stage.js"></script>
 <script src="js/view/sprites.js"></script>
+<script src="js/view/fx.js"></script>
+<script src="js/view/audio.js"></script>
+<script src="js/view/hud.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
