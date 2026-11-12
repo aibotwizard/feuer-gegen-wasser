@@ -26,9 +26,12 @@
   sprites.sync = function (world, time, dt) {
     const seen = new Set();
     for (const e of [world.fire, ...world.trees, ...world.waters]) {
+      if (e.state === "seed" || e.state === "wait") continue;
       seen.add(e.id);
       let sp = live.get(e.id); if (!sp) { sp = make(e); live.set(e.id, sp); }
-      sp.x = e.x; sp.y = e.y; place(sp, time, 1);
+      const fall = e.state === "fall" ? 1 - e.t / FW.CFG.water.fall : 0, grow = e.state === "sprout" ? e.t / FW.CFG.tree.sprout : 1;
+      sp.x = e.x; sp.y = e.y + fall * 400; place(sp, time, grow);
+      if (fall) sp.shadow.position.y = e.y - sp.d.ext.b + 4;
     }
     for (const [id, sp] of live) if (!seen.has(id)) { live.delete(id); sp.t = 0; dying.push(sp); }
     dying = dying.filter(sp => { sp.t += dt; place(sp, time, clamp(1 - sp.t / 0.35, 0, 1)); if (sp.t > 0.4) { dispose(sp); return false; } return true; });

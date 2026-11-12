@@ -27,16 +27,16 @@
 
   function resetGame() {
     sprites.clear(); hideMsg();
-    G.world = sim.create({ seed: (Math.random() * 0x7fffffff) | 0, wins });
+    G.world = sim.create({ level: 3, seed: (Math.random() * 0x7fffffff) | 0 });
     updateHud();
   }
   function onEvent(ev) {
     if (ev.type === "won") {
       wins++; try { localStorage.setItem("fireWaterWins", String(wins)); } catch (_) {}
-      G.timer = CFG.endDelay;
+      G.timer = 2.6;
       showMsg("win", "Du hast gewonnen! 🔥", "Du bist als Einziger übrig. Siege: " + wins + " · nächste Runde startet gleich …");
     } else if (ev.type === "lost") {
-      G.timer = CFG.endDelay;
+      G.timer = 2.6;
       if (ev.reason === "doused") showMsg("lose", "Das Wasser hat dich erwischt! 💧", "Das Spiel startet neu. Siege: " + wins);
       else showMsg("lose", "Keine Bäume mehr! 🌳", "Nur ein Baum kann Wasser töten. Das Spiel startet neu. Siege: " + wins);
     }
@@ -45,10 +45,11 @@
   function frame(dt) {
     G.time += dt;
     const w = G.world;
-    if (w.phase === "main") {
+    const playing = () => w.phase !== "won" && w.phase !== "lost";
+    if (playing()) {
       const input = { mx: (held("right") ? 1 : 0) - (held("left") ? 1 : 0), my: (held("up") ? 1 : 0) - (held("down") ? 1 : 0) };
       G.acc += dt;
-      while (G.acc >= sim.DT && w.phase === "main") { sim.step(w, input); G.acc -= sim.DT; }
+      while (G.acc >= sim.DT && playing()) { sim.step(w, input); G.acc -= sim.DT; }
       w.events.splice(0).forEach(onEvent);
       updateHud();
     } else { G.timer -= dt; if (G.timer <= 0) resetGame(); }
