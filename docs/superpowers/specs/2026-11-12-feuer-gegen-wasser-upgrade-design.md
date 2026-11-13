@@ -289,7 +289,7 @@ Everything in sections 1 to 11 was built, with the differences below.
 
 | Design said | Built | Why |
 |---|---|---|
-| Trees share out the waters, aim ahead and close in from two sides (6.2). | Trees do not hunt at all. They stand guard, back away from the fire, and lunge at water within range. Only the lunge aims ahead. | With hunting trees, a scripted player who only ran away won 75 to 99% of rounds on levels 1 to 6 in about 12 to 17 s. With guard trees the same player wins 1 to 42%. |
+| Trees share out the waters, aim ahead and close in from two sides (6.2). | Trees do not hunt at all. They stand guard, back away from the fire, and lunge at water within range. Only the lunge aims ahead. | With hunting trees, a scripted player who only ran away won 55 to 99% of rounds on levels 1 to 6, depending on the variant tried, in about 12 to 23 s. With guard trees the same player wins 1 to 42% on levels 1 to 10. |
 | Water keeps away from trees within 130 (5.6). | Caution starts at 210 and is full at 140, the lunge trigger range, and keeps growing closer in. | At 130 the water walked into lunge range on its own. A caution value that stops growing near the tree let water walk straight through. |
 | Water anger: one step every 10 s (5.6). | One step every 6 s, faster on higher levels. | Removes the last rounds that ran past 90 s. |
 | Same water behaviour rules on every level apart from the table (6.4). | On levels 1 and 2 water forgets the trees from further away (150 and 125 units from the fire instead of 100). | Makes luring easier to learn. |
