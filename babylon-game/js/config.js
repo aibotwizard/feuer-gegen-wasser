@@ -1,22 +1,26 @@
 // Maße der Figuren und alle Stellschrauben des Spiels.
 (function (FW) {
-  // Bildgröße (w, h), Drehpunkt (cx, cy) wie in Scratch, Anzeigegröße (size) und Trefferkreis (body)
+  // Bildgröße (w, h), Drehpunkt (cx, cy) wie in Scratch, Anzeigegröße (size), Trefferkreis (body)
+  // und Radius des Fußkreises (foot): mit dem stößt die Figur an Steine
   const GEOM = FW.GEOM = {
-    fire:  { w: 175.9347,  h: 224.77259, cx: 66.53558, cy: 105.2436,  size: 0.5, body: { dx: 0, dy: -4, r: 24 } },
-    tree:  { w: 146.34109, h: 206.43249, cx: 76.54109, cy: 125.57491, size: 0.5, body: { dx: 0, dy: 26, r: 26 } },
-    water: { w: 434,       h: 578,       cx: 217,      cy: 289,       size: 0.1073, body: { dx: 0, dy: -9, r: 17 } }
+    fire:  { w: 175.9347,  h: 224.77259, cx: 66.53558, cy: 105.2436,  size: 0.5, body: { dx: 0, dy: -4, r: 24 }, foot: 18 },
+    tree:  { w: 146.34109, h: 206.43249, cx: 76.54109, cy: 125.57491, size: 0.5, body: { dx: 0, dy: 26, r: 26 }, foot: 11 },
+    water: { w: 434,       h: 578,       cx: 217,      cy: 289,       size: 0.1073, body: { dx: 0, dy: -9, r: 17 }, foot: 15 }
   };
   for (const d of Object.values(GEOM)) {
     const s = d.size;
     d.offX = (d.w / 2 - d.cx) * s; d.offY = -(d.h / 2 - d.cy) * s;                 // Bildmitte relativ zum Drehpunkt
     d.ext = { l: d.cx * s, r: (d.w - d.cx) * s, t: d.cy * s, b: (d.h - d.cy) * s };  // Abstand der Bildränder vom Drehpunkt
     d.bx = d.offX + d.body.dx; d.by = d.offY + d.body.dy;                          // Mitte des Trefferkreises relativ zum Drehpunkt
+    d.fx = d.offX; d.fy = -d.ext.b + d.foot * 0.7;                                 // Mitte des Fußkreises relativ zum Drehpunkt
   }
 
   // Alle Strecken in Feld-Einheiten, alle Zeiten in Sekunden, Geschwindigkeiten in Einheiten pro Sekunde.
   FW.CFG = {
     fieldW: 960, fieldH: 540,
-    fire: { speed: 240, accel: 3000 },
+    fire: { speed: 240, accel: 3000, jumpTime: 0.5, jumpCooldown: 0.12, jumpHeight: 48 },   // Sprung: nur das Feuer kommt über Steine
+    // Steine: edge = Abstand zum Rand der begehbaren Fläche, damit zwischen Stein und Rand immer ein Durchgang bleibt
+    stone: { rMin: 22, rMax: 30, edge: 80, apart: 150, fromFire: 120, fromTree: 55, fromWater: 45 },
     tree: {
       speed: 150, accel: 900,
       fearR: 120, fearFull: 60,            // Angst vor dem Feuer: beginnt bei fearR, voll ab fearFull
@@ -37,22 +41,22 @@
     lives: 3, maxLives: 5, extraLifeEvery: 5
   };
 
-  // speed: Anteil der Feuer-Geschwindigkeit · replan: Reaktionszeit · roles: 1 alle jagen, 2 einer schneidet den Weg ab,
+  // stones: Steine, die den Weg versperren · speed: Anteil der Feuer-Geschwindigkeit · replan: Reaktionszeit · roles: 1 alle jagen, 2 einer schneidet den Weg ab,
   // 3 die übrigen kreisen ein · dodge: Chance, einem Sprung auszuweichen · anger: wie schnell die Wut wächst
   // lustNear, lustFar: ab welcher Nähe zum Feuer das Wasser die Bäume vergisst (ohne Angabe gilt CFG.water)
   const FIXED = [null,
-    { trees: 3, waters: 1, speed: 0.70, replan: 0.45, roles: 1, dodge: 0,    anger: 1.0, lustNear: 150, lustFar: 300 },   // zum Lernen: Wasser wird früher leichtsinnig
-    { trees: 3, waters: 2, speed: 0.75, replan: 0.40, roles: 1, dodge: 0,    anger: 1.0, lustNear: 125, lustFar: 260 },
-    { trees: 4, waters: 3, speed: 0.80, replan: 0.35, roles: 2, dodge: 0,    anger: 1.1 },
-    { trees: 4, waters: 4, speed: 0.85, replan: 0.30, roles: 3, dodge: 0,    anger: 1.2 },
-    { trees: 3, waters: 4, speed: 0.88, replan: 0.27, roles: 3, dodge: 0,    anger: 1.3 },
-    { trees: 4, waters: 5, speed: 0.90, replan: 0.24, roles: 3, dodge: 0.35, anger: 1.4 }
+    { stones: 2, trees: 3, waters: 1, speed: 0.70, replan: 0.45, roles: 1, dodge: 0,    anger: 1.0, lustNear: 150, lustFar: 300 },   // zum Lernen: Wasser wird früher leichtsinnig
+    { stones: 3, trees: 3, waters: 2, speed: 0.75, replan: 0.40, roles: 1, dodge: 0,    anger: 1.0, lustNear: 125, lustFar: 260 },
+    { stones: 4, trees: 4, waters: 3, speed: 0.80, replan: 0.35, roles: 2, dodge: 0,    anger: 1.1 },
+    { stones: 4, trees: 4, waters: 4, speed: 0.85, replan: 0.30, roles: 3, dodge: 0,    anger: 1.2 },
+    { stones: 5, trees: 3, waters: 4, speed: 0.88, replan: 0.27, roles: 3, dodge: 0,    anger: 1.3 },
+    { stones: 5, trees: 4, waters: 5, speed: 0.90, replan: 0.24, roles: 3, dodge: 0.35, anger: 1.4 }
   ];
   FW.levelDef = function (n) {
     n = Math.max(1, n | 0);
     const k = n - 6;
     const d = n <= 6 ? Object.assign({}, FIXED[n]) : {
-      trees: 3 + (n - 7) % 3, waters: Math.min(10, 5 + ((n - 7) >> 1)),
+      stones: 6, trees: 3 + (n - 7) % 3, waters: Math.min(10, 5 + ((n - 7) >> 1)),
       speed: Math.min(1, 0.90 + 0.02 * k), replan: Math.max(0.15, 0.24 - 0.02 * k),
       roles: 3, dodge: Math.min(0.7, 0.35 + 0.05 * k), anger: 1.4 + 0.1 * k
     };

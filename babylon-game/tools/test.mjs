@@ -6,7 +6,7 @@ import { FW, sim } from "./load.mjs";
 const STILL = { mx: 0, my: 0 }, CFG = FW.CFG;
 // Eine Welt, in die jeder Test genau die Figuren setzt, die er braucht. Bäume stehen, Wasser ist gelandet.
 function world(trees, waters, opts = {}) {
-  const w = sim.create({ level: 1, seed: 7, ...opts }); w.phase = "main"; w.time = 5; w.events.length = 0;
+  const w = sim.create({ level: 1, seed: 7, ...opts }); w.phase = "main"; w.time = 5; w.events.length = 0; w.stones = [];
   w.trees = trees.map(([x, y]) => Object.assign(sim.newTree(w, x, y, 0), { state: "roam" }));
   w.waters = waters.map(([x, y, state = "hunt"]) => Object.assign(sim.newWater(w, 0), { x, y, state, born: w.time, plan: 9 }));
   return w;
@@ -118,16 +118,78 @@ test("water picks a landing spot at least 250 from a fire in the middle and 150 
     assert.equal(drops, 4);
   }
 });
-test("nobody ever leaves the field", () => {
+// Abstand zwischen dem Fußkreis einer Figur und dem nächsten Stein (negativ = steht im Stein)
+const gap = (w, e) => Math.min(...w.stones.map(s => Math.hypot(sim.fx(e) - s.x, sim.fy(e) - s.y) - s.r - FW.GEOM[e.kind].foot));
+// Ein Stein genau auf dem Weg des Feuers nach rechts
+const stoneAhead = w => { w.stones = [{ id: 900, x: sim.fx(w.fire) + 150, y: sim.fy(w.fire), r: 26, look: 0 }]; return w.stones[0]; };
+
+test("a stone blocks the fire", () => {
+  const w = world([[400, 200]], [[-430, -200]]), s = stoneAhead(w); w.waters[0].state = "wait"; w.waters[0].startAt = 99;
+  run(w, 2, { mx: 1, my: 0 });
+  assert.ok(gap(w, w.fire) >= -1e-6, "fire stands inside the stone");
+  assert.ok(sim.fx(w.fire) < s.x, "fire got past the stone without jumping");
+});
+test("the fire slides around a stone it hits off-centre", () => {
+  const w = world([[400, 200]], [[-430, -200]]), s = stoneAhead(w); w.waters[0].state = "wait"; w.waters[0].startAt = 99; s.y += 12;
+  run(w, 2, { mx: 1, my: 0 });
+  assert.ok(sim.fx(w.fire) > s.x + s.r, "fire stuck on the stone at x " + sim.fx(w.fire).toFixed(0));
+});
+test("Space makes the fire jump over a stone", () => {
+  const w = world([[400, 200]], [[-430, -200]]), s = stoneAhead(w); w.waters[0].state = "wait"; w.waters[0].startAt = 99;
+  let jumped = false;
+  for (let i = 0; i < 240; i++) { const jump = !jumped && gap(w, w.fire) < 14; jumped = jumped || jump; sim.step(w, { mx: 1, my: 0, jump }); }
+  assert.deepEqual(types(w).filter(t => t === "jump" || t === "land"), ["jump", "land"]);
+  assert.ok(sim.fx(w.fire) > s.x + s.r + 18, "fire did not clear the stone");
+  assert.ok(gap(w, w.fire) >= -1e-6);
+});
+test("landing on a stone pushes the fire off it", () => {
+  const w = world([[400, 200]], [[-430, -200]]), s = stoneAhead(w); w.waters[0].state = "wait"; w.waters[0].startAt = 99;
+  w.fire.x += 150; w.fire.air = true; w.fire.jumpT = 0.02;
+  run(w, 0.1);
+  assert.equal(w.fire.air, false); assert.ok(gap(w, w.fire) >= -1e-6);
+});
+test("jumping does not protect the fire from water", () => {
+  const w = world([[300, 120]], [[30, 0]]); w.fire.air = true; w.fire.jumpT = 0.4;
+  sim.step(w, STILL);
+  assert.equal(w.reason, "doused");
+});
+test("water finds its way around a stone to a fire that stands still", () => {
+  const w = world([[430, -200]], [[-330, 0]]), s = stoneAhead(w); s.x = sim.fx(w.fire) - 150; w.waters[0].plan = 0;
+  w.waters[0].y = s.y - FW.GEOM.water.fy;                 // genau hinter dem Stein
+  run(w, 8);
+  assert.equal(w.reason, "doused");
+});
+test("a tree fleeing from the fire gets around a stone", () => {
+  const w = world([[0, 0]], []); w.phase = "finale"; const t = w.trees[0];
+  t.x = 140; t.y = sim.fy(w.fire) - FW.GEOM.tree.fy;
+  w.stones = [{ id: 900, x: sim.fx(t) + 60, y: sim.fy(t), r: 28, look: 0 }];
+  run(w, 2.2, { mx: 0.5, my: 0 });
+  assert.equal(w.trees.length, 1, "the tree was caught at the stone");
+  assert.ok(sim.fx(t) > w.stones[0].x || Math.abs(sim.fy(t) - w.stones[0].y) > 60, "tree is stuck behind the stone");
+});
+test("stones keep clear of the field edge, the fire's start and each other", () => {
+  for (let seed = 1; seed <= 40; seed++) {
+    const w = sim.create({ level: 9, seed }), K = CFG.stone;
+    assert.equal(w.stones.length, 6);
+    for (const s of w.stones) {
+      const k = w.walk; assert.ok(s.x >= k.minX + K.edge && s.x <= k.maxX - K.edge && s.y >= k.minY + K.edge && s.y <= k.maxY - K.edge, "stone too close to the edge, seed " + seed);
+      assert.ok(Math.hypot(s.x - sim.fx(w.fire), s.y - sim.fy(w.fire)) >= K.fromFire - 1e-6, "stone at the start, seed " + seed);
+      for (const o of w.stones) if (o !== s) assert.ok(Math.hypot(s.x - o.x, s.y - o.y) >= K.apart - 1e-6, "stones too close, seed " + seed);
+    }
+    for (const t of w.trees) assert.ok(gap(w, t) >= 20, "tree sprouts in a stone, seed " + seed);
+  }
+});
+test("nobody ever leaves the field or stands inside a stone", () => {
   for (let seed = 1; seed <= 12; seed++) {
     const w = sim.create({ level: 1 + seed % 8, seed });
     const push = { mx: seed % 2 ? 1 : -1, my: seed % 3 ? 1 : -1 };   // Feuer drückt in eine Ecke
     for (let i = 0; i < 2400 && w.phase !== "won" && w.phase !== "lost"; i++) {
-      sim.step(w, i % 600 < 300 ? push : { mx: -push.mx, my: 0 });
+      sim.step(w, i % 600 < 300 ? { ...push, jump: i % 90 === 0 } : { mx: -push.mx, my: 0 });
       for (const e of [w.fire, ...w.trees, ...w.waters]) {
         if (e.state === "wait") continue;
         const b = w.bounds[e.kind];
         assert.ok(e.x >= b.minX - 1e-6 && e.x <= b.maxX + 1e-6 && e.y >= b.minY - 1e-6 && e.y <= b.maxY + 1e-6, `${e.kind} left the field (seed ${seed})`);
+        if (e.state !== "fall" && !e.air) assert.ok(gap(w, e) >= -0.5, `${e.kind} stands inside a stone (seed ${seed})`);
       }
     }
   }
@@ -146,7 +208,7 @@ test("a world is plain data: a copy plays on exactly like the original", () => {
 });
 test("level table", () => {
   const L = FW.levelDef;
-  assert.deepEqual([L(1).trees, L(1).waters, L(1).speed], [3, 1, 0.7]);
+  assert.deepEqual([L(1).trees, L(1).waters, L(1).speed, L(1).stones], [3, 1, 0.7, 2]);
   assert.deepEqual([L(6).trees, L(6).waters, L(6).speed], [4, 5, 0.9]);
   assert.deepEqual([7, 8, 9, 10].map(n => L(n).trees), [3, 4, 5, 3]);
   assert.deepEqual([7, 8, 9, 10, 11].map(n => L(n).waters), [5, 5, 6, 6, 7]);

@@ -14,7 +14,7 @@
 
   // state: title | play | pause | won | lost | over.  wait/next: nach wait Sekunden (oder Leertaste) geht es mit next weiter.
   const G = { state: "title", world: null, run: { level: 1, lives: CFG.lives, score: 0, attempt: 1 }, demo: true, pilot: false, auto: /[?&]auto\b/.test(location.search),
-              time: 0, acc: 0, timeScale: 1, freeze: 0, wait: 0, since: 0, next: null, hint: false, fpsT: 0, fpsN: 0 };
+              time: 0, acc: 0, timeScale: 1, freeze: 0, jump: false, wait: 0, since: 0, next: null, hint: false, fpsT: 0, fpsN: 0 };
 
   // ---------- Eingabe ----------
   const keys = new Set();
@@ -37,6 +37,7 @@
     if (code === "KeyM") { audio.setMuted(!audio.muted); hud.muted(audio.muted); return; }
     if (code === "KeyP" || code === "Escape") { if (G.state === "play") pause(true); else if (G.state === "pause") pause(false); return; }
     if (code === "KeyR" && (G.state === "play" || G.state === "pause")) { restart(); return; }
+    if (code === "Space" && G.state === "play") { G.jump = true; return; }           // springen
     if (code === "Space" || code === "Enter") {
       if (G.state === "title" || G.state === "over") startRun();
       else if (G.state === "pause") pause(false);
@@ -113,7 +114,7 @@
     switch (ev.type) {
       case "sprout": audio.play("sprout"); break;
       case "rainStart": audio.play("rain"); break;
-      case "landed": case "crouch": case "lunge": case "dart": case "dodge": case "angry": case "lastTree": case "finale": audio.play(ev.type); break;
+      case "landed": case "crouch": case "lunge": case "dart": case "dodge": case "angry": case "lastTree": case "finale": case "jump": case "land": audio.play(ev.type); break;
     }
     if (ev.type === "drunk") {
       audio.play("drunk", ev); G.freeze = 0.07; hud.pop(ev.x, ev.y + 34, "+" + ev.points + (ev.combo > 1 ? "  ×" + ev.combo : ""));
@@ -128,7 +129,7 @@
   // Einfacher Selbstläufer für das Bild hinter dem Titel: weicht dem Wasser aus, verbrennt im Finale die Bäume
   function pilot(w) {
     const f = w.fire, waters = w.waters.filter(sim.landed), px = sim.px(f), py = sim.py(f), b = w.bb.fire;
-    if (w.phase === "finale") { const n = sim.nearest(f, w.trees, t => t.state !== "seed"); if (!n) return STILL; const dx = sim.px(n.e) - px, dy = sim.py(n.e) - py, d = Math.hypot(dx, dy) || 1; return { mx: dx / d, my: dy / d }; }
+    if (w.phase === "finale") { const n = sim.nearest(f, w.trees, t => t.state !== "seed"); if (!n) return STILL; const dx = sim.px(n.e) - px, dy = sim.py(n.e) - py, d = Math.hypot(dx, dy) || 1; return { mx: dx / d, my: dy / d, jump: sim.stoneAhead(w, dx / d, dy / d) }; }
     if (!waters.length) return STILL;
     let bestA = STILL, bs = -Infinity;
     for (const a of DIRS) {
@@ -139,7 +140,8 @@
       s += Math.min(x - b.minX, b.maxX - x, y - b.minY, b.maxY - y, 120) * 0.3 + (a === G.lastPilot ? 6 : 0);
       if (s > bs) { bs = s; bestA = a; }
     }
-    return G.lastPilot = bestA;
+    G.lastPilot = bestA;
+    return { mx: bestA.mx, my: bestA.my, jump: sim.stoneAhead(w, bestA.mx, bestA.my) };
   }
 
   // ---------- ein Bild ----------
@@ -149,9 +151,9 @@
       let dt = real * G.timeScale;
       if (G.freeze > 0) { G.freeze -= real; dt = 0; }                                // kurzer Stillstand bei einem Treffer
       if ((G.state === "play" || G.state === "title") && !over(G.world)) {
-        const w = G.world, input = G.demo || G.pilot ? pilot(w) : { mx: (held("right") ? 1 : 0) - (held("left") ? 1 : 0), my: (held("up") ? 1 : 0) - (held("down") ? 1 : 0) };
+        const w = G.world, input = G.demo || G.pilot ? pilot(w) : { mx: (held("right") ? 1 : 0) - (held("left") ? 1 : 0), my: (held("up") ? 1 : 0) - (held("down") ? 1 : 0), jump: G.jump };
         G.acc += dt;
-        for (let n = 0; G.acc >= sim.DT && n < 12 && !over(w); n++) { sim.step(w, input); G.acc -= sim.DT; }
+        for (let n = 0; G.acc >= sim.DT && n < 12 && !over(w); n++) { sim.step(w, input); G.acc -= sim.DT; input.jump = G.jump = false; }
         if (G.acc > sim.DT) G.acc = 0;
         w.events.splice(0).forEach(onEvent);
       }

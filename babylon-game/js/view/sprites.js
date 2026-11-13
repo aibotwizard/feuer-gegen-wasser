@@ -4,7 +4,8 @@
   const sprites = FW.sprites = {};
   const live = new Map();          // id -> Bild einer lebenden Figur
   let dying = [];                  // Bilder, die gerade verschwinden
-  let emoteMats = null, ring = null, heat = null;
+  let emoteMats = null, ring = null, heat = null, rockMats = null;
+  const rocks = new Map();         // id -> Bild eines Steins
   const WARM = [1, 0.95, 0.84];
 
   function setup() {
@@ -31,6 +32,34 @@
     heat.alphaIndex = 620; heat.position.z = 4.2; heat.visibility = 0;
   }
 
+  // Stein im Stil der Figuren: flache Fläche, etwas Licht und Schatten, zwei Filzstift-Striche
+  function drawRock(look) {
+    return (ctx, W) => {
+      let seed = look * 7919 + 13; const R = () => { seed = seed * 16807 % 2147483647; return seed / 2147483647; };
+      const n = 12, pts = [];
+      for (let k = 0; k < n; k++) { const a = k / n * 6.283, j = 0.84 + R() * 0.15; pts.push([W / 2 + Math.cos(a) * W * 0.46 * j, W * 0.53 + Math.sin(a) * W * 0.41 * j]); }
+      ctx.beginPath(); pts.forEach((p, k) => { const q = pts[(k + 1) % n], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2; k ? ctx.quadraticCurveTo(p[0], p[1], mx, my) : ctx.moveTo(mx, my); });
+      ctx.closePath(); ctx.fillStyle = ["#9aa0a8", "#a59d95", "#8d99a4"][look]; ctx.fill();
+      ctx.save(); ctx.clip();
+      ctx.fillStyle = "rgba(255,255,255,.3)"; ctx.beginPath(); ctx.ellipse(W * 0.4, W * 0.33, W * 0.27, W * 0.13, -0.25, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(W * 0.55, W * 1.0, W * 0.6, W * 0.3, 0, 0, 7); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "#1c1c1c"; ctx.lineWidth = W * 0.04; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      const x0 = W * (0.52 + R() * 0.12), y0 = W * (0.3 + R() * 0.08);
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + W * 0.07, y0 + W * 0.13); ctx.lineTo(x0 - W * 0.02, y0 + W * 0.24); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(W * 0.27, W * (0.58 + R() * 0.06)); ctx.lineTo(W * 0.36, W * 0.66); ctx.stroke();
+    };
+  }
+  function makeRock(s) {
+    const scene = stage.scene, d = s.r * 2 + 10;
+    if (!rockMats) rockMats = [0, 1, 2].map(i => stage.makeMaterial(stage.canvasTex(256, 256, drawRock(i))));
+    const mesh = BABYLON.MeshBuilder.CreatePlane("rock", { width: d, height: d }, scene);
+    mesh.material = rockMats[s.look % 3]; mesh.position.set(s.x, s.y + 2, 0); mesh.alphaIndex = 1000 + Math.round(CFG.fieldH / 2 - s.y); mesh.isPickable = false;
+    const shadow = BABYLON.MeshBuilder.CreatePlane("sh", { width: s.r * 2.7, height: s.r * 0.9 }, scene);
+    shadow.material = stage.shadowMat; shadow.alphaIndex = 700; shadow.position.set(s.x + 3, s.y - s.r * 0.72, 4);
+    return { mesh, shadow };
+  }
+
   function make(e) {
     if (!emoteMats) setup();
     const d = GEOM[e.kind], s = d.size, W = d.w * s, H = d.h * s, scene = stage.scene;
@@ -40,7 +69,7 @@
     const shadow = BABYLON.MeshBuilder.CreatePlane("sh", { width: W * 0.8, height: W * 0.25 }, scene);
     shadow.material = stage.shadowMat; shadow.alphaIndex = 700; shadow.position.z = 4;
     return { id: e.id, kind: e.kind, d, W, H, root, mesh, shadow, emote: null, emoteKind: null, emoteA: 0,
-             x: e.x, y: e.y, lift: 0, seed: Math.random() * 6.28, hop: 0, sq: 0, sqv: 0, lean: 0, state: e.state, bang: 0, out: -1, vis: 1 };
+             x: e.x, y: e.y, lift: 0, air: false, seed: Math.random() * 6.28, hop: 0, sq: 0, sqv: 0, lean: 0, state: e.state, bang: 0, out: -1, vis: 1 };
   }
   function dispose(sp) { sp.mesh.material.dispose(); sp.mesh.dispose(); sp.root.dispose(); sp.shadow.dispose(); if (sp.emote) sp.emote.dispose(); }
 
@@ -86,6 +115,8 @@
     if (sp.kind === "fire") {
       sx *= 1 + 0.02 * Math.sin(time * 7) - 0.03 * speed / 240; sy *= 1 + 0.035 * Math.sin(time * 9 + 1) + 0.07 * speed / 240;
       lean = -(e.vx || 0) / 240 * 0.2;
+      if (e.air !== sp.air) { if (e.air) sp.sqv += 5; else sp.sq = -0.26; sp.air = e.air; }      // Absprung und Landung
+      if (e.air) { sp.lift = CFG.fire.jumpHeight * Math.sin(Math.PI * clamp(1 - e.jumpT / CFG.fire.jumpTime, 0, 1)); sy *= 1.08; }
       if (sp.out >= 0) { sp.out += dt; const k = clamp(1 - sp.out / 0.8, 0, 1); sx *= 0.3 + 0.7 * k; sy *= 0.2 + 0.8 * k; vis = k; tint(sp, world, 0.45 + 0.55 * k, 0.5 + 0.5 * k, 0.6 + 0.4 * k); }
       else tint(sp, world, 1, 1, 1);
     } else if (sp.kind === "tree") {
@@ -118,6 +149,7 @@
     }
     sp.lean += (lean - sp.lean) * Math.min(1, dt * 12);
     place(sp, sx, sy, vis);
+    if (sp.kind === "fire" && sp.lift > 4) sp.mesh.alphaIndex += 400;                       // im Sprung vor Steinen und Figuren
     top = sp.root.position.y + sp.H * sy;
     sp.bang = Math.max(0, sp.bang - dt);
     showEmote(sp, sp.kind === "tree" && e.fear > 0.3 && e.state !== "lunge" ? "sweat" : sp.kind === "water" && sp.bang > 0 ? "bang" : sp.kind === "water" && e.anger >= 4 ? "anger" : null, dt, top);
@@ -126,6 +158,8 @@
   // Jedes Bild einmal pro Bild-Aufbau an den Zustand der Regeln anpassen
   sprites.sync = function (world, time, dt) {
     const seen = new Set(), fire = world.fire;
+    for (const s of world.stones) if (!rocks.has(s.id)) rocks.set(s.id, makeRock(s));
+    if (rockMats) for (const m of rockMats) m.emissiveColor.copyFrom(stage.ambient);
     for (const e of [fire, ...world.trees, ...world.waters]) {
       if (e.state === "seed" || e.state === "wait") continue;
       seen.add(e.id);
@@ -179,6 +213,7 @@
   sprites.clear = function () {
     for (const sp of live.values()) dispose(sp); live.clear();
     for (const a of dying) dispose(a.sp); dying = [];
+    for (const r of rocks.values()) { r.mesh.dispose(); r.shadow.dispose(); } rocks.clear();
     if (ring) { ring.visibility = 0; heat.visibility = 0; }
   };
 })(globalThis.FW = globalThis.FW || {});

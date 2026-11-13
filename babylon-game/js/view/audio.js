@@ -48,6 +48,8 @@
     crouch:  () => tone("triangle", 150, 95, 0.13, 0.18),
     lunge:   () => noise("bandpass", 300, 1800, 0.26, 0.2, 0, 2),
     dart:    () => tone("triangle", 220, 480, 0.12, 0.12),
+    jump:    () => tone("sine", 300, 760, 0.17, 0.16),
+    land:    () => { tone("sine", 130, 60, 0.11, 0.2); noise("lowpass", 500, 200, 0.1, 0.1); },
     dodge:   () => noise("bandpass", 1400, 2600, 0.14, 0.09, 0, 3),
     angry:   () => { tone("sawtooth", 90, 60, 0.35, 0.12); tone("sawtooth", 96, 64, 0.35, 0.1); },
     drunk:   ev => {                                              // Schlucken, dazu ein Ton, der mit der Kombo höher wird

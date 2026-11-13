@@ -3,6 +3,7 @@
 (function (FW) {
   const sim = FW.sim, st = FW.steer, C = FW.CFG.tree;
   const A = { x: 0, y: 0, cut: 0 }, OUT = { x: 0, y: 0, s: 0 }, AIM = { x: 0, y: 0 };
+  const G = FW.GEOM.tree, OX = G.fx - G.bx, OY = G.fy - G.by, FOOT = G.foot;      // vom Trefferkreis zum Fußkreis
 
   function setState(t, s) { t.state = s; t.t = 0; }
 
@@ -21,6 +22,7 @@
         s -= 2.2 * st.ramp(fd, C.fearFull, C.fearR);                                         // Angst am Ort, an dem ich landen würde
       }
       s -= 0.8 * A.cut;                                                                      // nicht gegen den Rand laufen
+      if (w.stones.length) s -= 1.1 * Math.max(st.blocked(w.stones, px + dx * C.look * 0.5 + OX, py + dy * C.look * 0.5 + OY, FOOT, 16), st.blocked(w.stones, A.x + OX, A.y + OY, FOOT, 16));   // nicht gegen Steine
       for (const o of w.trees) if (o !== t && o.state !== "seed") {
         const od = Math.hypot(A.x - sim.px(o), A.y - sim.py(o)); if (od < C.sep) s -= 0.5 * (1 - od / C.sep);
       }

@@ -197,8 +197,8 @@
       ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = .6 * u; ctx.beginPath(); ctx.arc(x, y, w * .36, 3.5, 4.5); ctx.stroke();
       ctx.strokeStyle = "rgba(60,62,68,.5)"; ctx.lineWidth = .3 * u; ctx.beginPath(); ctx.moveTo(x + w * .05, y - h * .1); ctx.lineTo(x + w * .18, y + h * .12); ctx.stroke();
     };
-    for (let i = 0; i < 26; i++) {                        // einzelne Steine auf dem Feld
-      const w = rr(10, 22) * u; stone(fx0 + rr(30, CFG.fieldW - 30) * u, fy0 + rr(30, CFG.fieldH - 30) * u, w, w * rr(0.6, 0.8));
+    for (let i = 0; i < 18; i++) {                        // einzelne kleine Steine auf dem Feld (nur Zierde, klein genug, um sie nicht mit Hindernissen zu verwechseln)
+      const w = rr(6, 12) * u; stone(fx0 + rr(30, CFG.fieldW - 30) * u, fy0 + rr(30, CFG.fieldH - 30) * u, w, w * rr(0.6, 0.8));
     }
     for (let c = 0; c < 16; c++) {                        // Kiesel-Gruppen
       const cx = fx0 + rr(30, CFG.fieldW - 30) * u, cy = fy0 + rr(30, CFG.fieldH - 30) * u;

@@ -29,6 +29,13 @@
   // Abstand zum nächsten Feldrand
   st.room = (x, y, b) => Math.min(x - b.minX, b.maxX - x, y - b.minY, b.maxY - y);
 
+  // Wie sehr steht an der Stelle (x, y) ein Stein im Weg? 0 = frei, 1 = berührt, mehr = mittendrin. r = Fußradius.
+  st.blocked = function (stones, x, y, r, margin) {
+    let p = 0;
+    for (const s of stones) { const k = 1 - (Math.hypot(x - s.x, y - s.y) - s.r - r) / margin; if (k > p) p = k; }
+    return Math.min(p, 2);
+  };
+
   // Vorhalten: wo ist das Ziel, wenn ich mit speed dort ankomme (höchstens maxT voraus)?
   st.lead = function (px, py, tx, ty, tvx, tvy, speed, maxT, out) {
     const t = Math.min(maxT, Math.hypot(tx - px, ty - py) / speed);

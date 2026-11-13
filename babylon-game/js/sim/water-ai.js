@@ -3,6 +3,7 @@
 (function (FW) {
   const sim = FW.sim, st = FW.steer, C = FW.CFG.water, FIRE = FW.CFG.fire;
   const A = { x: 0, y: 0, cut: 0 }, OUT = { x: 0, y: 0, s: 0 };
+  const G = FW.GEOM.water, OX = G.fx - G.bx, OY = G.fy - G.by, FOOT = G.foot;     // vom Trefferkreis zum Fußkreis
   const SLOTS = [2.094, -2.094, 3.142, 1.047, -1.047, 2.618, -2.618, 0.524];   // Plätze rund ums Feuer, vom Jäger aus gezählt
 
   // Rollen im Rudel: der Nächste jagt, der Zweite schneidet den Weg ab, die Übrigen kreisen ein
@@ -46,6 +47,7 @@
         s -= 2.5 * caution * danger;
       }
       s -= 0.6 * A.cut;
+      if (w.stones.length) s -= 1.1 * Math.max(st.blocked(w.stones, px + dx * C.look * 0.5 + OX, py + dy * C.look * 0.5 + OY, FOOT, 16), st.blocked(w.stones, A.x + OX, A.y + OY, FOOT, 16));   // nicht gegen Steine
       for (const p of w.waters) if (p !== o && p.state === "hunt") {
         const od = Math.hypot(A.x - sim.px(p), A.y - sim.py(p)); if (od < C.sep) s -= 0.6 * (1 - od / C.sep);
       }

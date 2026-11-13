@@ -20,6 +20,8 @@ const STILL = { mx: 0, my: 0 };
 const unit = (dx, dy) => { const d = Math.hypot(dx, dy) || 1; return { mx: dx / d, my: dy / d }; };
 const ACTIONS = [STILL, ...Array.from({ length: 8 }, (_, i) => ({ mx: Math.cos(i * Math.PI / 4), my: Math.sin(i * Math.PI / 4) }))];
 const visible = t => t.state !== "seed";
+// Alle programmierten Spieler springen, sobald direkt vor ihnen ein Stein liegt
+const act = (w, a) => sim.stoneAhead(w, a.mx, a.my) ? { mx: a.mx, my: a.my, jump: true } : a;
 const toward = (w, e) => unit(sim.px(e) + e.vx * 0.2 - sim.px(w.fire), sim.py(e) + e.vy * 0.2 - sim.py(w.fire));
 
 const PLAYERS = {
@@ -59,7 +61,7 @@ function lookahead({ every, delay, horizon, slip }) {
     let bv = -Infinity, best = action;
     for (const a of ACTIONS) {
       const c = structuredClone(w); c.events = [];
-      for (let i = 0; i < horizon && c.phase !== "won" && c.phase !== "lost"; i++) sim.step(c, i < delay ? action : a);
+      for (let i = 0; i < horizon && c.phase !== "won" && c.phase !== "lost"; i++) sim.step(c, act(c, i < delay ? action : a));
       const v = value(w, c) + (a === action ? 4 : 0);
       if (v > bv) { bv = v; best = a; }
     }
@@ -88,7 +90,7 @@ function run(level, playerName, n) {
   const c = { won: 0, doused: 0, noTrees: 0, stuck: 0 }, wonT = [], stars = [0, 0, 0, 0];
   for (let i = 0; i < n; i++) {
     const w = sim.create({ level, seed: 1000 + i * 7919 }), player = PLAYERS[playerName]();
-    while (w.phase !== "won" && w.phase !== "lost" && w.time < MAX_T) { sim.step(w, player(w)); w.events.length = 0; }
+    while (w.phase !== "won" && w.phase !== "lost" && w.time < MAX_T) { sim.step(w, act(w, player(w))); w.events.length = 0; }
     if (w.phase === "won") { c.won++; wonT.push(w.result.time); stars[w.result.stars]++; } else if (w.phase === "lost") c[w.reason]++; else c.stuck++;
   }
   wonT.sort((a, b) => a - b);

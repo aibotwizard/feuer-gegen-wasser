@@ -78,12 +78,13 @@
     for (const d of decals) if (d.t < d.life) { d.t += dt; const k = 1 - d.t / d.life; d.m.visibility = d.a * Math.min(1, k * 2.5); if (d.t >= d.life) d.m.setEnabled(false); }
     if ((pollenT -= dt) <= 0) { pollenT = 0.12; fx.emit("pollen", (Math.random() - 0.5) * CFG.fieldW, (Math.random() - 0.5) * CFG.fieldH, 1); }
     if (world && running) {
-      const f = world.fire, fxp = f.x + GEOM.fire.offX, fyp = f.y - GEOM.fire.ext.b, speed = Math.hypot(f.vx, f.vy);
+      const f = world.fire, lift = f.air ? CFG.fire.jumpHeight * Math.sin(Math.PI * (1 - f.jumpT / CFG.fire.jumpTime)) : 0;
+      const fxp = f.x + GEOM.fire.offX, fyp = f.y - GEOM.fire.ext.b + lift, speed = Math.hypot(f.vx, f.vy);
       if (world.phase !== "lost") {
         fx.emit("ember", fxp, fyp + 34, Math.random() < dt * 34 ? 1 : 0, 20);
         if (speed > 60) {
           fx.emit("spark", fxp - f.vx * 0.05, fyp + 16, Math.random() < dt * 40 ? 1 : 0, 12);
-          if ((trailT -= dt) <= 0) { trailT = 0.07; fx.decal("scorch", fxp + (Math.random() - 0.5) * 10, fyp + 5, 44, 44, 2.2, 0.5); }
+          if ((trailT -= dt) <= 0 && !f.air) { trailT = 0.07; fx.decal("scorch", fxp + (Math.random() - 0.5) * 10, fyp + 5, 44, 44, 2.2, 0.5); }
         }
       }
       wetT -= dt;
@@ -109,6 +110,10 @@
     else if (ev.type === "crouch") { const t = world.trees.find(t => t.id === ev.id); if (t) fx.emit("leaf", t.x + T.bx, t.y + T.by, 4, 16); }
     else if (ev.type === "lunge" || ev.type === "dart") { const t = world.trees.find(t => t.id === ev.id); if (t) fx.emit("dust", t.x + T.offX, t.y - T.ext.b + 4, 8, 14); }
     else if (ev.type === "dodge") fx.emit("drop", ...at(world.waters, ev.id), 6, 8);
+    else if (ev.type === "jump" || ev.type === "land") {
+      const f = world.fire; fx.emit("dust", f.x + GEOM.fire.offX, f.y - GEOM.fire.ext.b + 4, ev.type === "land" ? 12 : 7, 16);
+      if (ev.type === "land") { fx.emit("spark", f.x + GEOM.fire.offX, f.y - GEOM.fire.ext.b + 10, 8, 14); stage.shake(0.1); }
+    }
     else if (ev.type === "drunk") {
       fx.emit("drop", ev.x, ev.y, 22, 12); fx.emit("sparkle", ev.x, ev.y + 10, 10 + 4 * ev.combo, 22);
       fx.decal("puddle", ev.x, ev.y - Wg.ext.b + 2, 74, 30, 7, 0.9); stage.shake(0.22);
