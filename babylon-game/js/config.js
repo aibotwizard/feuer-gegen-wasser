@@ -4,7 +4,7 @@
   const GEOM = FW.GEOM = {
     fire:  { w: 175.9347,  h: 224.77259, cx: 66.53558, cy: 105.2436,  size: 0.5, body: { dx: 0, dy: -4, r: 24 } },
     tree:  { w: 146.34109, h: 206.43249, cx: 76.54109, cy: 125.57491, size: 0.5, body: { dx: 0, dy: 26, r: 26 } },
-    water: { w: 48,        h: 60,        cx: 24,       cy: 30,        size: 1,   body: { dx: 0, dy: -4, r: 17 } }
+    water: { w: 434,       h: 578,       cx: 217,      cy: 289,       size: 0.1073, body: { dx: 0, dy: -9, r: 17 } }
   };
   for (const d of Object.values(GEOM)) {
     const s = d.size;

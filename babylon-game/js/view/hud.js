@@ -6,8 +6,7 @@
   let icons = {}, shown = 0, bannerT = 0, livesKey = "";
 
   hud.init = function () {
-    const c = document.createElement("canvas"); c.width = 96; c.height = 120; stage.drawWater(c.getContext("2d"), 96, 120);
-    icons = { fire: FW.SVG.fire, tree: FW.SVG.tree, water: c.toDataURL() };
+    icons = FW.ART;
     document.querySelectorAll("img[data-icon]").forEach(img => { img.src = icons[img.dataset.icon]; });
   };
 

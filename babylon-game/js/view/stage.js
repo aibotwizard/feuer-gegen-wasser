@@ -147,16 +147,16 @@
   // Kleine Textur, mit Canvas-Befehlen gezeichnet
   stage.canvasTex = function (w, h, draw) { const t = stage.dynTex(w, h); draw(t.getContext(), w, h); return finishTex(t); };
 
-  // Texturen der drei Figuren laden: Feuer und Baum aus den eingebetteten Zeichnungen, Wasser gezeichnet
+  // Texturen der drei Figuren aus den eingebetteten Zeichnungen laden
   stage.loadKinds = function () {
     return Promise.all(Object.entries(GEOM).map(([kind, def]) => new Promise(resolve => {
-      if (!FW.SVG[kind]) { def.tex = stage.canvasTex(def.w * 10, def.h * 10, drawWater); resolve(); return; }
-      const img = new Image();
+      const img = new Image(), src = FW.ART[kind];
       img.onload = () => {
-        const K = Math.min(8, 4096 / Math.max(def.w, def.h)), tw = Math.round(def.w * K), th = Math.round(def.h * K);
+        const K = src.startsWith("data:image/svg") ? Math.min(8, 4096 / Math.max(def.w, def.h)) : 1;   // SVG groß rastern, PNG in Originalgröße
+        const tw = Math.round(def.w * K), th = Math.round(def.h * K);
         def.tex = stage.canvasTex(tw, th, ctx => ctx.drawImage(img, 0, 0, tw, th)); resolve();
       };
-      img.src = FW.SVG[kind];
+      img.src = src;
     })));
   };
 
@@ -229,20 +229,4 @@
     rim(fx0 - o, fy0 - o, fx0 + fw + o, fy0 - o); rim(fx0 - o, fy0 + fh + o, fx0 + fw + o, fy0 + fh + o);
     rim(fx0 - o, fy0 - o, fx0 - o, fy0 + fh + o); rim(fx0 + fw + o, fy0 - o, fx0 + fw + o, fy0 + fh + o);
   }
-
-  // Wassertropfen mit bösem Gesicht, in hoher Auflösung gezeichnet
-  function drawWater(ctx, W, H) {
-    const sx = W / 48, sy = H / 60; ctx.save(); ctx.scale(sx, sy);
-    ctx.beginPath(); ctx.moveTo(24, 2);
-    ctx.bezierCurveTo(30, 16, 45, 26, 45, 38); ctx.bezierCurveTo(45, 50, 36, 58, 24, 58);
-    ctx.bezierCurveTo(12, 58, 3, 50, 3, 38); ctx.bezierCurveTo(3, 26, 18, 16, 24, 2); ctx.closePath();
-    const g = ctx.createLinearGradient(0, 4, 0, 58); g.addColorStop(0, "#7fd6ff"); g.addColorStop(1, "#1c7be0");
-    ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 1.6; ctx.strokeStyle = "#0b4fa8"; ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.beginPath(); ctx.ellipse(14, 34, 3, 7, -0.3, 0, 7); ctx.fill();
-    ctx.strokeStyle = "#08224a"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(14, 31); ctx.lineTo(21, 35); ctx.moveTo(34, 31); ctx.lineTo(27, 35); ctx.stroke();   // Augenbrauen
-    ctx.fillStyle = "#08224a"; ctx.beginPath(); ctx.arc(18, 39, 2.4, 0, 7); ctx.arc(30, 39, 2.4, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(24, 49, 5, 3.6, 5.8); ctx.stroke(); ctx.restore();
-  }
-  stage.drawWater = drawWater;
 })(globalThis.FW = globalThis.FW || {});
