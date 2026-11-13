@@ -39,9 +39,10 @@
 
   // speed: Anteil der Feuer-Geschwindigkeit · replan: Reaktionszeit · roles: 1 alle jagen, 2 einer schneidet den Weg ab,
   // 3 die übrigen kreisen ein · dodge: Chance, einem Sprung auszuweichen · anger: wie schnell die Wut wächst
+  // lustNear, lustFar: ab welcher Nähe zum Feuer das Wasser die Bäume vergisst (ohne Angabe gilt CFG.water)
   const FIXED = [null,
-    { trees: 3, waters: 1, speed: 0.70, replan: 0.45, roles: 1, dodge: 0,    anger: 1.0 },
-    { trees: 3, waters: 2, speed: 0.75, replan: 0.40, roles: 1, dodge: 0,    anger: 1.0 },
+    { trees: 3, waters: 1, speed: 0.70, replan: 0.45, roles: 1, dodge: 0,    anger: 1.0, lustNear: 150, lustFar: 300 },   // zum Lernen: Wasser wird früher leichtsinnig
+    { trees: 3, waters: 2, speed: 0.75, replan: 0.40, roles: 1, dodge: 0,    anger: 1.0, lustNear: 125, lustFar: 260 },
     { trees: 4, waters: 3, speed: 0.80, replan: 0.35, roles: 2, dodge: 0,    anger: 1.1 },
     { trees: 4, waters: 4, speed: 0.85, replan: 0.30, roles: 3, dodge: 0,    anger: 1.2 },
     { trees: 3, waters: 4, speed: 0.88, replan: 0.27, roles: 3, dodge: 0,    anger: 1.3 },
@@ -55,6 +56,7 @@
       speed: Math.min(1, 0.90 + 0.02 * k), replan: Math.max(0.15, 0.24 - 0.02 * k),
       roles: 3, dodge: Math.min(0.7, 0.35 + 0.05 * k), anger: 1.4 + 0.1 * k
     };
+    if (!d.lustNear) { d.lustNear = FW.CFG.water.lustNear; d.lustFar = FW.CFG.water.lustFar; }
     d.level = n; d.par = FW.CFG.score.parBase + FW.CFG.score.parPerWater * d.waters;
     return d;
   };

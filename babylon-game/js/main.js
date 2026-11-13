@@ -48,7 +48,7 @@
 
   // ---------- Ablauf ----------
   function newWorld(level, flawless) {
-    sprites.clear(); fx.clear(); stage.unfocus(true); stage.setMood(level - 1);
+    sprites.clear(); fx.clear(); stage.unfocus(true); stage.setGray(false); stage.setMood(level - 1);
     G.world = sim.create({ level, seed: seed(), flawless }); G.acc = 0; G.timeScale = 1; G.freeze = 0;
     hud.hint(null); hud.arrow(); hud.lastTree(null);
   }
@@ -120,7 +120,7 @@
       if (G.hint) { G.hint = false; hintSeen = true; save("fireWaterHint", "1"); hud.hint(null); hud.arrow(); }
     } else if (ev.type === "burned") { audio.play("burned"); G.freeze = 0.06; if (ev.points) hud.pop(ev.x, ev.y + 44, "+" + ev.points, "small"); }
     else if (ev.type === "finale") hud.banner("finale", "Die Wiese gehört dir!", "Verbrenne die Bäume!", { seconds: 2 });
-    else if (ev.type === "doused") { audio.play("doused"); hud.flash(0.45); }
+    else if (ev.type === "doused") { audio.play("doused"); hud.flash(0.45); stage.setGray(true); }
     else if (ev.type === "won") levelWon(ev.result);
     else if (ev.type === "lost") levelLost(ev.reason);
   }

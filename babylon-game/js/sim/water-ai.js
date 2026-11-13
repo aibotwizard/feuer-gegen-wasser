@@ -30,7 +30,7 @@
     ax = sim.clamp(ax, b.minX, b.maxX); ay = sim.clamp(ay, b.minY, b.maxY);
     const d0 = Math.hypot(px - ax, py - ay);
     // Vorsicht vor Bäumen: sinkt nah am Feuer und mit der Wut
-    const lust = C.lustMin + (1 - C.lustMin) * sim.clamp((fd - C.lustNear) / (C.lustFar - C.lustNear), 0, 1);
+    const lust = C.lustMin + (1 - C.lustMin) * sim.clamp((fd - w.def.lustNear) / (w.def.lustFar - w.def.lustNear), 0, 1);
     const caution = lust * Math.max(0, 1 - C.angerCaution * o.anger);
     const score = (dx, dy) => {
       st.ahead(px, py, dx, dy, C.look, b, A);

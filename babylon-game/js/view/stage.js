@@ -12,7 +12,7 @@
     { name: "Nacht",  ground: [0.34, 0.42, 0.72], ambient: [0.58, 0.66, 0.95], light: 1.00 }
   ];
   const cam = { cx: 0, cy: 0, zoom: 1, tx: 0, ty: 0, tz: 1, trauma: 0, halfW: 1, halfH: 1 };
-  let groundMat, lightMesh, lightMat, clouds = [];
+  let groundMat, lightMesh, lightMat, clouds = [], tufts = [];
   stage.mood = MOODS[1];
 
   stage.init = function (canvas) {
@@ -52,6 +52,23 @@
     lightMesh = BABYLON.MeshBuilder.CreatePlane("light", { width: 620, height: 620 }, scene);
     lightMesh.material = lightMat; lightMesh.position.z = 3.5; lightMesh.alphaIndex = 600; lightMesh.isPickable = false;
 
+    // ein paar Grasbüschel, die sich im Wind wiegen
+    const tuftMat = stage.makeMaterial(stage.canvasTex(96, 96, (ctx, W) => {
+      ctx.lineCap = "round";
+      for (let i = 0; i < 11; i++) {
+        const x = W * (0.2 + 0.6 * i / 10), lean = (i - 5) * W * 0.035, h = W * (0.5 + 0.35 * Math.sin(i * 2.4) ** 2);
+        ctx.strokeStyle = ["#2f7a2a", "#5fb347", "#78c256", "#3a8a30"][i % 4]; ctx.lineWidth = W * 0.045;
+        ctx.beginPath(); ctx.moveTo(x, W - 4); ctx.quadraticCurveTo(x + lean * 0.4, W - h * 0.6, x + lean, W - h); ctx.stroke();
+      }
+    }));
+    for (let i = 0; i < 46; i++) {
+      const root = new BABYLON.TransformNode("tuft", scene), m = BABYLON.MeshBuilder.CreatePlane("tuft", { width: 22, height: 22 }, scene);
+      m.parent = root; m.position.y = 11; m.material = tuftMat; m.alphaIndex = 640; m.isPickable = false;
+      root.position.set((Math.random() - 0.5) * (CFG.fieldW - 40), (Math.random() - 0.5) * (CFG.fieldH - 40), 4.3);
+      const k = 0.7 + Math.random() * 0.7; root.scaling.set(k, k, 1);
+      tufts.push({ root, p: Math.random() * 6.28, a: 0.1 + Math.random() * 0.12 });
+    }
+
     // Wolkenschatten
     const cloudMat = stage.makeMaterial(stage.canvasTex(256, 256, (ctx, W) => {
       for (let i = 0; i < 9; i++) {
@@ -84,6 +101,7 @@
     const c = stage.camera, hw = cam.halfW / cam.zoom, hh = cam.halfH / cam.zoom;
     c.orthoLeft = cam.cx + ox - hw; c.orthoRight = cam.cx + ox + hw; c.orthoTop = cam.cy + oy + hh; c.orthoBottom = cam.cy + oy - hh;
   }
+  stage.setGray = on => { stage.canvas.style.transition = "filter .6s"; stage.canvas.style.filter = on ? "saturate(.25) brightness(.85)" : "none"; };   // das Bild verliert die Farbe
   stage.shake = amount => { cam.trauma = Math.min(1, cam.trauma + amount); };
   stage.focus = (x, y, zoom) => { cam.tx = x * (1 - 1 / zoom); cam.ty = y * (1 - 1 / zoom); cam.tz = zoom; };   // sanft auf einen Punkt zoomen
   stage.unfocus = snap => { cam.tx = 0; cam.ty = 0; cam.tz = 1; if (snap) { cam.cx = 0; cam.cy = 0; cam.zoom = 1; } };
@@ -98,6 +116,7 @@
     groundMat.emissiveColor.set(m.ground[0], m.ground[1], m.ground[2]);
     stage.ambient = new BABYLON.Color3(m.ambient[0], m.ambient[1], m.ambient[2]);
     stage.scene.clearColor.set(0.05 * m.ground[0], 0.08 * m.ground[1], 0.06 * m.ground[2], 1);
+    if (tufts.length) tufts[0].root.getChildMeshes()[0].material.emissiveColor.set(m.ground[0], m.ground[1], m.ground[2]);   // alle Büschel teilen sich ein Material
   };
 
   // Einmal pro Bild: Kamera, Feuerschein, Wolken
@@ -112,6 +131,7 @@
       lightMesh.position.x = fire.x; lightMesh.position.y = fire.y; lightMesh.scaling.set(flick, flick, 1);
       lightMesh.visibility = Math.max(0, stage.mood.light * lit) * flick;
     } else lightMesh.visibility = 0;
+    for (const t of tufts) t.root.rotation.z = t.a * Math.sin(time * 1.6 + t.p) + t.a * 0.4 * Math.sin(time * 3.7 + t.p * 2);
     for (const c of clouds) { c.m.position.x += c.v * dt; if (c.m.position.x > GW / 2 + 400) { c.m.position.x = -GW / 2 - 400; c.m.position.y = (Math.random() - 0.5) * CFG.fieldH; } }
   };
 
