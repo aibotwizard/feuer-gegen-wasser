@@ -2,7 +2,7 @@
 
 Date: 2026-11-12
 Scope: `babylon-game/` only. The Scratch files (`*.sb3`) are not touched.
-Status: design, waiting for approval. Nothing has been built yet.
+Status: approved on 2026-11-12 and built. Section 13 records what differs from this design.
 
 ## 1. What stays the same
 
@@ -280,3 +280,48 @@ Touch or gamepad control, new field elements (ponds, blocking rocks, power-ups, 
 - **Smaller characters.** At 960 × 540 the characters are two thirds of today's size on screen. If that looks too small, 800 × 450 is the fallback (80% of today's size, twice the area).
 - **Speed of effects.** Glow and particles cost drawing time at today's double resolution. The fallback is in section 7.
 - **The luring bot is hard to write.** If the scripted luring player turns out weaker than a person, its targets say little. Then hand play decides and the targets are loosened.
+
+## 13. As built (2026-11-13)
+
+Everything in sections 1 to 11 was built, with the differences below.
+
+### Where the game differs from the design
+
+| Design said | Built | Why |
+|---|---|---|
+| Trees share out the waters, aim ahead and close in from two sides (6.2). | Trees do not hunt at all. They stand guard, back away from the fire, and lunge at water within range. Only the lunge aims ahead. | With hunting trees, a scripted player who only ran away won 75 to 99% of rounds on levels 1 to 6 in about 12 to 17 s. With guard trees the same player wins 1 to 42%. |
+| Water keeps away from trees within 130 (5.6). | Caution starts at 210 and is full at 140, the lunge trigger range, and keeps growing closer in. | At 130 the water walked into lunge range on its own. A caution value that stops growing near the tree let water walk straight through. |
+| Water anger: one step every 10 s (5.6). | One step every 6 s, faster on higher levels. | Removes the last rounds that ran past 90 s. |
+| Same water behaviour rules on every level apart from the table (6.4). | On levels 1 and 2 water forgets the trees from further away (150 and 125 units from the fire instead of 100). | Makes luring easier to learn. |
+| Glow effect on flames and embers (7). | Additive halos and particles, no post-processing pass. | Same look, cheaper, no risk to the frame rate. |
+| Field 960 × 540 with 800 × 450 as fallback (12). | 960 × 540. | No reason to fall back. |
+
+### Measured results
+
+Rule tests: 20 of 20 pass (`node tools/test.mjs`).
+
+Balance (`node tools/balance.mjs --n 300 --levels 1-10`): 300 rounds per level for the three simple players, 75 for the two look-ahead players.
+
+| Scripted player | Won, levels 1 to 10 | Median length of a won round | How it loses |
+|---|---|---|---|
+| Never moves | 0% on every level | none | doused 97 to 100% |
+| Always chases the nearest tree | 0 to 1% | none | doused 22 to 79%, burned the last tree 21 to 77% |
+| Only runs from water, burns trees in the finale | 1 to 42% | 27 to 35 s | doused |
+| Lures, reacts 0.2 s late | 75 to 100% (100% on level 1, 75% on level 10) | 19 to 30 s | doused |
+| Lures, reacts at once | 83 to 100% | 15 to 27 s | doused |
+
+Against the targets of section 9:
+
+- Player who never moves loses at least 95%: met on every level. On level 1, 3% of its rounds were still open after 90 s. In those the trees had drunk the single water and the motionless fire never burned the trees, so this is not a standoff.
+- Player who always chases trees wins at most 10%: met (0 to 1%).
+- Length of a won round 20 to 45 s: met from level 2 on for both luring players. Level 1 is shorter (15 to 19 s) because it has one water.
+- Rounds decided within 90 s: 100% for the three players that finish rounds, except one of 75 rounds for the late-reacting luring player on level 2.
+- Win rates of the luring player (90% on level 1 falling to 10 to 25% on level 10): not met and no longer used. The look-ahead bots simulate every direction in advance and are stronger than a person, as section 12 warned. Their win rates stay high through level 10. How hard the levels are for people has to be judged by playing.
+
+In the browser (Chrome, 1470 px wide window, rendering at 2940 px): title, play, finale, win, life lost, game over and pause all reached; no console errors; 60 frames per second on level 10 with six waters and all effects.
+
+Not checked: opening `index.html` directly from disk without a local server. The test browser blocks `file://` addresses.
+
+### How to run
+
+From `babylon-game/`: `python3 -m http.server 8765`, then open `http://localhost:8765`. Adding `?auto` to the address makes the game ignore the keyboard and skip saving scores, for automated checks through `window.__game`.

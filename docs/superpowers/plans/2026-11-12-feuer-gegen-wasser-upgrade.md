@@ -30,56 +30,56 @@
 
 ### Phase 0: Safety net
 
-- [ ] `git init`, `.gitignore` for `.DS_Store` and `.playwright-mcp/`, baseline commit of the project as it is.
-- [ ] Move the two embedded drawings out of `index.html` into `js/assets.js` with a script, byte for byte.
-- [ ] Split the remaining code into `js/config.js`, `js/sim/world.js`, `js/sim/tree-ai.js`, `js/sim/water-ai.js`, `js/view/stage.js`, `js/view/sprites.js`, `js/main.js`. Behaviour unchanged. Fixed time step and seeded random generator.
-- [ ] `tools/balance.mjs` with the three scripted players of the design's section 2. `tools/test.mjs` with tests for the five core rules and for staying inside the field.
-- [ ] Check: `node tools/test.mjs` passes. `node tools/balance.mjs` reproduces the section 2 table within 3 points. The page loads without console errors and looks as before.
-- [ ] Commit.
+- [x] `git init`, `.gitignore` for `.DS_Store` and `.playwright-mcp/`, baseline commit of the project as it is.
+- [x] Move the two embedded drawings out of `index.html` into `js/assets.js` with a script, byte for byte.
+- [x] Split the remaining code into `js/config.js`, `js/sim/world.js`, `js/sim/tree-ai.js`, `js/sim/water-ai.js`, `js/view/stage.js`, `js/view/sprites.js`, `js/main.js`. Behaviour unchanged. Fixed time step and seeded random generator.
+- [x] `tools/balance.mjs` with the three scripted players of the design's section 2. `tools/test.mjs` with tests for the five core rules and for staying inside the field.
+- [x] Check: `node tools/test.mjs` passes. `node tools/balance.mjs` reproduces the section 2 table within 3 points. The page loads without console errors and looks as before.
+- [x] Commit.
 
 ### Phase 1: Rules and feel
 
-- [ ] Field 960 × 540, new speeds, velocity and acceleration for all characters.
-- [ ] Rain-in for water, sprouting for trees, world phases, level time.
-- [ ] Gradual tree fear, crouch and lunge, water caution that fades near the fire, water anger.
-- [ ] Last-tree warning, finale, scoring inside the rules (combo, finale points, time bonus, stars).
-- [ ] Tests for each new rule. Balance script gets the `still` and stuck-round checks.
-- [ ] Check: the player who never moves loses at least 95% on levels 1 to 10. At least 99% of rounds are decided within 90 s.
-- [ ] Commit.
+- [x] Field 960 × 540, new speeds, velocity and acceleration for all characters.
+- [x] Rain-in for water, sprouting for trees, world phases, level time.
+- [x] Gradual tree fear, crouch and lunge, water caution that fades near the fire, water anger.
+- [x] Last-tree warning, finale, scoring inside the rules (combo, finale points, time bonus, stars).
+- [x] Tests for each new rule. Balance script gets the `still` and stuck-round checks.
+- [x] Check: the player who never moves loses at least 95% on levels 1 to 10. At least 99% of rounds are decided within 90 s.
+- [x] Commit.
 
 ### Phase 2: Bot intelligence
 
-- [ ] `js/sim/steering.js`: candidate-direction steering with wall handling and aim-ahead.
-- [ ] Tree brain: target sharing, aim-ahead, two-sided approach, panic with side darts.
-- [ ] Water brain: pack roles (chase, cut off, surround), slide, sidestep, reaction time by level.
-- [ ] Balance script gets the luring player (looks a short time ahead by simulating) and the level sweep.
-- [ ] Check: all balance targets of the design's section 9 on levels 1 to 10, or a documented reason where a target was changed.
-- [ ] Commit.
+- [x] `js/sim/steering.js`: candidate-direction steering with wall handling and aim-ahead.
+- [x] Tree brain: target sharing, aim-ahead, two-sided approach, panic with side darts.
+- [x] Water brain: pack roles (chase, cut off, surround), slide, sidestep, reaction time by level.
+- [x] Balance script gets the luring player (looks a short time ahead by simulating) and the level sweep.
+- [x] Check: all balance targets of the design's section 9 on levels 1 to 10, or a documented reason where a target was changed.
+- [x] Commit.
 
 ### Phase 3: Levels and flow
 
-- [ ] `js/main.js`: run state (level, lives, score), screens (title, playing, level won, life lost, game over, pause), keys (Space/Enter, P/Esc, R, M, F).
-- [ ] `js/view/hud.js`: top bar with level, lives, score, counters and rule triangle; banners; title and game-over screens; level 1 hint; last-tree warning.
-- [ ] Saved best level and score; `fireWaterWins` keeps counting.
-- [ ] Check in the browser: a full run from title to game over with the keyboard alone, no console errors.
-- [ ] Commit.
+- [x] `js/main.js`: run state (level, lives, score), screens (title, playing, level won, life lost, game over, pause), keys (Space/Enter, P/Esc, R, M, F).
+- [x] `js/view/hud.js`: top bar with level, lives, score, counters and rule triangle; banners; title and game-over screens; level 1 hint; last-tree warning.
+- [x] Saved best level and score; `fireWaterWins` keeps counting.
+- [x] Check in the browser: a full run from title to game over with the keyboard alone, no console errors.
+- [x] Commit.
 
 ### Phase 4: Graphics
 
-- [ ] Larger ground with field rim; time of day by level; fire light; cloud shadows; pollen.
-- [ ] `js/view/sprites.js`: lean, hop, squash and stretch, sprout, fall, head signs, depth order.
-- [ ] `js/view/fx.js`: particle types, ground marks, kill and death sequences, shake, freeze, zoom.
-- [ ] Check in the browser: every event of the design's section 7 has its effect; frame rate on level 10.
-- [ ] Commit.
+- [x] Larger ground with field rim; time of day by level; fire light; cloud shadows; pollen.
+- [x] `js/view/sprites.js`: lean, hop, squash and stretch, sprout, fall, head signs, depth order.
+- [x] `js/view/fx.js`: particle types, ground marks, kill and death sequences, shake, freeze, zoom.
+- [x] Check in the browser: every event of the design's section 7 has its effect; frame rate on level 10.
+- [x] Commit.
 
 ### Phase 5: Sound
 
-- [ ] `js/view/audio.js`: generated sounds for every event, fire crackle, meadow background, mute key.
-- [ ] Check in the browser: no console errors, sounds start after the first key press, mute works.
-- [ ] Commit.
+- [x] `js/view/audio.js`: generated sounds for every event, fire crackle, meadow background, mute key.
+- [x] Check in the browser: no console errors, sounds start after the first key press, mute works.
+- [x] Commit.
 
 ### Phase 6: Tuning
 
-- [ ] Balance sweeps, fix cheap winning tricks, performance pass, final browser run through levels.
-- [ ] Update the design document where final values differ from the starting values.
-- [ ] Commit.
+- [x] Balance sweeps, fix cheap winning tricks, performance pass, final browser run through levels.
+- [x] Update the design document where final values differ from the starting values.
+- [x] Commit.
