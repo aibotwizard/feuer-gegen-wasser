@@ -1,0 +1,33 @@
+# Feuer gegen Wasser at https://pok.app/nite/
+#
+# Installed by deploy/deploy.sh to /etc/caddy/sites/nite.caddy, which Banana
+# World's /etc/caddy/Caddyfile pulls in with `import /etc/caddy/sites/*.caddy`.
+# Edit it HERE, never on the server.
+#
+# The host pok.app belongs to Banana World. This block claims only the /nite
+# path: Caddy orders site blocks by specificity, so a host+path block is tried
+# before the plain `pok.app` block (checked with `caddy adapt` on the VM).
+# No `log` directive here: the pok.app logger already covers every request to
+# the host, including these.
+pok.app/nite* {
+	# /nite without the slash would make index.html's relative script URLs
+	# resolve to /js/... on Banana World. Send it to /nite/ first.
+	@bare path /nite
+	redir @bare /nite/ 308
+
+	encode zstd gzip
+
+	# Strip the /nite prefix and serve the files as they are in the repo.
+	# Caddy runs confined as httpd_t under SELinux, so the files live under
+	# /var/www (httpd_sys_content_t by default), not in /home/opc, which the
+	# web server domain may not read.
+	handle_path /nite/* {
+		root * /var/www/nite
+		file_server
+	}
+
+	# Anything else that starts with /nite (e.g. /nitefoo): not ours.
+	handle {
+		respond 404
+	}
+}

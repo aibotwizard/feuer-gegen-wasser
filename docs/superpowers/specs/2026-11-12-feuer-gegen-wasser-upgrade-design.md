@@ -324,4 +324,37 @@ Not checked: opening `index.html` directly from disk without a local server. The
 
 ### How to run
 
-From `babylon-game/`: `python3 -m http.server 8765`, then open `http://localhost:8765`. Adding `?auto` to the address makes the game ignore the keyboard and skip saving scores, for automated checks through `window.__game`.
+From `babylon-game/`: `node tools/serve.mjs`, then open `http://localhost:8765`. This small server tells the browser not to keep old copies, so a normal reload always shows the latest files. Adding `?auto` to the address makes the game ignore the keyboard and skip saving scores, for automated checks through `window.__game`.
+
+## 14. Added on request after the first build (2026-11-13)
+
+These two changes were asked for after playing the built game. They replace what sections 1, 7 and 11 say about the water picture and about new field elements.
+
+### Hand-drawn water
+
+The water character is now the user's own drawing of a smiling blue drop, in the same style as the fire and the tree. The picture was cut out of its white background and is embedded in `js/assets.js` next to the other two. The drop drawn by code is gone. Size on the field and hit circle are about the same as before (hit circle radius 17).
+
+### Stones and jumping
+
+- **Stones.** Each level has stones on the field: 2 on level 1, 3 on level 2, 4 on levels 3 and 4, 5 on levels 5 and 6, 6 from level 7 on. A stone is a circle of radius 22 to 30. Stones are placed away from the fire's start, at least 150 apart, and far enough from the edge that there is always a way past.
+- **Who is blocked.** Fire, trees and water all walk around stones. Each character has a small foot circle that cannot enter a stone and slides along its edge. Trees and water also see stones when choosing a direction, so they steer around instead of bumping.
+- **Jump.** Space makes the fire jump for 0.5 s. In the air, stones do not stop it. Water still douses it and it still burns trees, so the jump only helps with stones. During play Space no longer does anything else; on the title, win, loss and game-over screens it still means start or continue.
+- **Look.** Stones are drawn flat with two marker strokes, to match the characters. The decoration pebbles in the grass were made smaller so they are not mistaken for obstacles.
+
+### Measured with stones
+
+Rule tests: 28 of 28 pass. Eight are new: a stone blocks the fire, the fire slides around a stone hit off-centre, Space jumps over a stone, landing on a stone pushes the fire off, jumping does not protect from water, water finds its way around a stone, a fleeing tree gets around a stone, and stones keep clear of edge, start and each other. The test that nobody leaves the field now also checks that nobody stands inside a stone.
+
+Balance, levels 1 to 10. The scripted players jump when a stone is directly ahead. 200 rounds per level for the simple players, 50 for the look-ahead players.
+
+| Scripted player | Won | Median length of a won round |
+|---|---|---|
+| Never moves | 0% | none |
+| Always chases the nearest tree | 0 to 1% | none |
+| Only runs from water, burns trees in the finale | 2 to 60% (was 1 to 42% without stones) | 26 to 40 s |
+| Lures, reacts 0.2 s late | 86 to 100% | 16 to 31 s |
+| Lures, reacts at once | 86 to 100% | 15 to 28 s |
+
+Stones help the player a little, because water has to go around them and the fire does not. No rounds got stuck apart from one of 50 for the late-reacting luring player on level 2.
+
+In the browser: stones show, the fire is stopped by a stone and jumps over it with Space, the self-playing fire behind the title jumps on its own, no console errors, 60 frames per second.
