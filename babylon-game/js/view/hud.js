@@ -11,8 +11,8 @@
   };
 
   hud.screen = function (name) { for (const id of ["title", "over", "pause"]) $(id).classList.toggle("on", id === name); };
-  hud.playing = function (on) { $("hud").classList.toggle("off", !on); $("keys").classList.toggle("off", !on); };
-  hud.muted = function (m) { $("muted").textContent = m ? "(aus)" : ""; };
+  hud.playing = function (on) { for (const id of ["hud", "keys", "pauseBtn"]) $(id).classList.toggle("off", !on); };
+  hud.muted = function (m) { $("muted").textContent = m ? "(aus)" : ""; $("soundBtn").textContent = m ? "Ton: aus" : "Ton: an"; };
 
   // Einmal pro Bild
   hud.frame = function (dt, run, world) {

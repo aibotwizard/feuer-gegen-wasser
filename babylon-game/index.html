@@ -2,21 +2,25 @@
 <html lang="de" translate="no">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d1410">
 <meta name="google" content="notranslate">
 <title>Feuer gegen Wasser</title>
 <link rel="icon" href="data:,">
 <style>
   :root { --ink: #f3f6fb; --dim: #b9c3d6; --panel: rgba(16,20,28,.72); --fire: #ffb02e; --water: #5cc0ff; --tree: #6fd86a; --bad: #ff6b5e; --gold: #ffd54a; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1410; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1410; touch-action: none; overscroll-behavior: none;
+               -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   body { font: 15px/1.4 ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif; color: var(--ink); }
-  #c { width: 100vw; height: 100vh; display: block; outline: none; touch-action: none; }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
   .ui { position: fixed; pointer-events: none; user-select: none; }
   #vignette { inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.42) 100%); }
   #flash { inset: 0; background: #fff; opacity: 0; }
 
   /* obere Leiste */
-  #hud { top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: stretch; transition: opacity .3s; }
+  #hud { top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: stretch; transition: opacity .3s; }
   #hud.off, #keys.off { opacity: 0; }
   #hud .pill { background: var(--panel); padding: 6px 13px; border-radius: 12px; white-space: nowrap; display: flex; align-items: center; gap: 7px; backdrop-filter: blur(4px); }
   #hud .lbl { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
@@ -32,9 +36,9 @@
   #keys b { color: var(--ink); font-weight: 600; }
 
   /* Hinweise und Banner */
-  #hint { left: 50%; bottom: 46px; transform: translateX(-50%); text-align: center; background: var(--panel); padding: 10px 18px; border-radius: 14px; max-width: 90vw; opacity: 0; transition: opacity .4s; }
+  #hint { left: 50%; bottom: calc(46px + env(safe-area-inset-bottom)); transform: translateX(-50%); text-align: center; background: var(--panel); padding: 10px 18px; border-radius: 14px; max-width: 90vw; opacity: 0; transition: opacity .4s; }
   #hint.on { opacity: 1; } #hint b { display: block; font-size: 20px; color: var(--gold); } #hint span { color: var(--dim); }
-  #arrow { inset: 0; width: 100vw; height: 100vh; opacity: 0; transition: opacity .4s; } #arrow.on { opacity: 1; }
+  #arrow { inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .4s; } #arrow.on { opacity: 1; }
   #arrow path { fill: none; stroke: var(--gold); stroke-width: 4; stroke-dasharray: 10 9; stroke-linecap: round; animation: dash .6s linear infinite; }
   #arrow polygon { fill: var(--gold); }
   @keyframes dash { to { stroke-dashoffset: -19; } }
@@ -72,6 +76,59 @@
   @keyframes pulse { from { opacity: .55; } to { opacity: 1; } }
   .best { color: var(--ink) !important; } .new { color: var(--gold) !important; font-weight: 800; }
   kbd { font: inherit; background: rgba(255,255,255,.14); border-radius: 6px; padding: 1px 7px; color: var(--ink); }
+
+  /* Finger-Steuerung: body.touch = Tablet oder Handy. .kb nur mit Tastatur, .tc nur mit Fingern */
+  body.touch .kb, body:not(.touch) .tc { display: none !important; }
+  #stick { left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity .15s; }
+  #stick.on { opacity: 1; }
+  #stick::before { content: ""; position: absolute; left: -50px; top: -50px; width: 100px; height: 100px; box-sizing: border-box; border-radius: 50%; border: 2px solid rgba(255,255,255,.55); background: rgba(16,20,28,.22); }
+  #knob { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,176,46,.85); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  button { font: inherit; color: var(--ink); border: 0; cursor: pointer; touch-action: manipulation; }
+  #pauseBtn { top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); width: 44px; height: 44px; border-radius: 12px; background: var(--panel); pointer-events: auto;
+              display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0; transition: opacity .3s; }
+  #pauseBtn i { width: 5px; height: 17px; border-radius: 2px; background: var(--ink); }
+  #pauseBtn.off { opacity: 0; pointer-events: none; }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+  .btns button { background: var(--panel); border-radius: 14px; padding: 13px 20px; min-width: 150px; font-size: 18px; font-weight: 700; }
+  .btns button:first-child { background: var(--gold); color: #1c1400; }
+  .btns button:active, #pauseBtn:active { filter: brightness(1.3); }
+  .rotate { display: none; }
+
+  /* schmale Bildschirme: obere Leiste verkleinern */
+  @media (max-width: 760px) {
+    #rules { display: none !important; }
+    #hud { gap: 5px; } #hud .pill { padding: 5px 9px; gap: 5px; border-radius: 10px; }
+    #hud .lbl { font-size: 10px; } #hud b { font-size: 16px; } #hud img { height: 18px; } #lives img { height: 16px; }
+    body.touch #hud { left: calc(8px + env(safe-area-inset-left)); transform: none; }
+    #hint { padding: 7px 12px; } #hint b { font-size: 16px; } #hint span { font-size: 12px; }
+  }
+  @media (max-width: 520px) {
+    #hud { gap: 3px; } #hud .pill { padding: 4px 6px; gap: 3px; } #combo { min-width: 0; }
+    #hud .lbl { font-size: 9px; letter-spacing: 0; } #hud b { font-size: 14px; } #hud img { height: 16px; } #lives img { height: 14px; }
+    #banner { top: 16%; }
+    #pauseBtn { top: calc(46px + env(safe-area-inset-top)); }   /* unter der Leiste, daneben ist kein Platz */
+  }
+  /* Handy quer: wenig Höhe, der Titel muss ohne Scrollen passen */
+  @media (max-height: 520px) {
+    .screen { padding: 8px 16px; }
+    .screen h1 { font-size: clamp(28px, 11vh, 52px); margin-bottom: 2px; } .screen h2 { font-size: clamp(28px, 12vh, 52px); margin-bottom: 4px; }
+    .screen p { margin: 2px 0; font-size: 13px; max-width: 96ch; }
+    .cards { gap: 8px; margin: 8px 0 6px; } .card { padding: 6px 12px; min-width: 150px; border-radius: 12px; }
+    .card div { height: 42px; gap: 8px; } .card img { height: 38px; } .card img:last-of-type { height: 31px; } .card i { font-size: 20px; }
+    .card span { margin-top: 3px; font-size: 13px; }
+    .go { margin-top: 8px !important; font-size: 19px !important; }
+    .btns { margin-top: 8px; } .btns button { padding: 10px 16px; font-size: 16px; }
+    #banner { top: max(9%, calc(50px + env(safe-area-inset-top))); } #banner small { margin-top: 5px; }
+  }
+  /* Handy hochkant: drei Karten nebeneinander */
+  @media (max-width: 640px) and (orientation: portrait) {
+    .screen p { font-size: 14px; }
+    .cards { gap: 6px; margin: 14px 0 10px; flex-wrap: nowrap; align-self: stretch; } .card { padding: 8px 6px; min-width: 0; flex: 1 1 0; }
+    .card div { height: 46px; gap: 4px; } .card img { height: 42px; } .card img:last-of-type { height: 34px; } .card i { font-size: 18px; }
+    .card span { font-size: 12px; line-height: 1.2; }
+    .btns { flex-direction: column; align-self: stretch; } .btns button { min-width: 0; }
+    body.touch .rotate { display: block; color: var(--gold); }
+  }
 </style>
 </head>
 <body>
@@ -91,7 +148,9 @@
     <img data-icon="fire" alt="Feuer"><i>›</i><img data-icon="tree" alt="Baum"><i>›</i><img data-icon="water" alt="Wasser"><i>›</i><img data-icon="fire" alt="Feuer">
   </div>
 </div>
-<div id="keys" class="ui off"><b>Pfeiltasten</b> / <b>WASD</b> bewegen · <b>Leertaste</b> springen · <b>P</b> Pause · <b>R</b> Neustart · <b>M</b> Ton <span id="muted"></span> · <b>F</b> Vollbild</div>
+<button id="pauseBtn" class="ui tc off" aria-label="Pause"><i></i><i></i></button>
+<div id="stick" class="ui"><div id="knob"></div></div>
+<div id="keys" class="ui kb off"><b>Pfeiltasten</b> / <b>WASD</b> bewegen · <b>Leertaste</b> springen · <b>P</b> Pause · <b>R</b> Neustart · <b>M</b> Ton <span id="muted"></span> · <b>F</b> Vollbild</div>
 <div id="hint" class="ui"><b id="hintTitle"></b><span id="hintSub"></span></div>
 <div id="banner" class="ui"><h1 id="bannerTitle"></h1><div class="stars" id="bannerStars"></div><p id="bannerSub"></p><small id="bannerNote"></small></div>
 
@@ -105,21 +164,24 @@
   </div>
   <p><b>Lock das Wasser zu den Bäumen.</b> Die Bäume haben Angst vor dir, aber sie springen auf jedes Wasser, das ihnen zu nahe kommt.</p>
   <p>Ist alles Wasser weg, verbrenne die Bäume. Verbrennst du den <b>letzten Baum zu früh</b>, hast du verloren.</p>
-  <p><b>Steine versperren den Weg</b>, dir und dem Wasser. Nur du kannst darüber springen.</p>
-  <p><kbd>Pfeiltasten</kbd> oder <kbd>WASD</kbd> bewegen · <kbd>Leertaste</kbd> springen · <kbd>P</kbd> Pause · <kbd>R</kbd> Neustart · <kbd>M</kbd> Ton · <kbd>F</kbd> Vollbild</p>
+  <p><b>Steine versperren den Weg</b>, dir und dem Wasser.<span class="kb"> Nur du kannst darüber springen.</span></p>
+  <p class="tc"><b>Leg einen Finger auf die Wiese und zieh:</b> Das Feuer läuft in diese Richtung.</p>
+  <p class="rotate">Dreh dein Gerät quer, dann ist die Wiese größer.</p>
+  <p class="kb"><kbd>Pfeiltasten</kbd> oder <kbd>WASD</kbd> bewegen · <kbd>Leertaste</kbd> springen · <kbd>P</kbd> Pause · <kbd>R</kbd> Neustart · <kbd>M</kbd> Ton · <kbd>F</kbd> Vollbild</p>
   <p class="best" id="titleBest"></p>
-  <p class="go">Leertaste zum Starten</p>
+  <p class="go"><span class="kb">Leertaste zum Starten</span><span class="tc">Tippen zum Starten</span></p>
 </div>
 <div id="over" class="screen">
   <h2>Spiel vorbei</h2>
   <p class="best" id="overResult"></p>
   <p class="new" id="overNew"></p>
   <p id="overBest"></p>
-  <p class="go">Leertaste: noch mal</p>
+  <p class="go"><span class="kb">Leertaste: noch mal</span><span class="tc">Tippen: noch mal</span></p>
 </div>
 <div id="pause" class="screen">
   <h2>Pause</h2>
-  <p><kbd>P</kbd> oder <kbd>Esc</kbd> weiter · <kbd>R</kbd> Level neu starten · <kbd>M</kbd> Ton · <kbd>F</kbd> Vollbild</p>
+  <p class="kb"><kbd>P</kbd> oder <kbd>Esc</kbd> weiter · <kbd>R</kbd> Level neu starten · <kbd>M</kbd> Ton · <kbd>F</kbd> Vollbild</p>
+  <div class="btns tc"><button id="resumeBtn">Weiter</button><button id="restartBtn">Level neu starten</button><button id="soundBtn">Ton: an</button></div>
 </div>
 
 <script src="babylon.js"></script>
@@ -134,6 +196,7 @@
 <script src="js/view/fx.js"></script>
 <script src="js/view/audio.js"></script>
 <script src="js/view/hud.js"></script>
+<script src="js/view/touch.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

@@ -214,3 +214,30 @@ test("level table", () => {
   assert.deepEqual([7, 8, 9, 10, 11].map(n => L(n).waters), [5, 5, 6, 6, 7]);
   assert.equal(L(60).waters, 10); assert.equal(L(60).speed, 1); assert.equal(L(4).par, 20 + 8 * 4);
 });
+
+// ---------- Finger-Steuerung: nur die Rechnung, die Seite braucht es dafür nicht ----------
+const require = (await import("node:module")).createRequire(import.meta.url);
+require("../js/view/touch.js");
+const stick = FW.touch.stick, near = (a, b) => Math.abs(a - b) < 1e-9;
+test("stick: no drag and a drag inside the dead zone do not move the fire", () => {
+  for (const p of [{ x: 100, y: 100 }, { x: 105, y: 97 }]) { const s = stick({ x: 100, y: 100 }, p); assert.equal(s.mx, 0); assert.equal(s.my, 0); }
+});
+test("stick: the fire runs in the drag direction, and up on the screen is up on the meadow", () => {
+  const o = { x: 100, y: 100 };
+  let s = stick(o, { x: 140, y: 100 }); assert.ok(near(s.mx, 1) && near(s.my, 0), "right");
+  s = stick(o, { x: 60, y: 100 });      assert.ok(near(s.mx, -1) && near(s.my, 0), "left");
+  s = stick(o, { x: 100, y: 60 });      assert.ok(near(s.mx, 0) && near(s.my, 1), "up");
+  s = stick(o, { x: 100, y: 140 });     assert.ok(near(s.mx, 0) && near(s.my, -1), "down");
+  s = stick(o, { x: 130, y: 70 });      assert.ok(s.mx > 0.7 && s.my > 0.7 && near(Math.hypot(s.mx, s.my), 1), "diagonal");
+});
+test("stick: a short drag is slow, a full drag is full speed and never more", () => {
+  const o = { x: 0, y: 0 }, speed = d => Math.hypot(stick(o, { x: d, y: 0 }).mx, stick(o, { x: d, y: 0 }).my);
+  assert.ok(speed(15) > 0.2 && speed(15) < 0.5); assert.ok(speed(15) < speed(22));
+  assert.ok(near(speed(30), 1)); assert.ok(near(speed(50), 1)); assert.ok(near(speed(400), 1));
+});
+test("stick: past the edge the ring follows the finger, so turning back is a short flick", () => {
+  const R = FW.touch.R, far = stick({ x: 0, y: 0 }, { x: 300, y: 0 });
+  assert.ok(near(far.o.x, 300 - R) && near(far.o.y, 0));
+  const back = stick(far.o, { x: 300 - 2 * R, y: 0 });       // einen Ringdurchmesser zurück: volle Fahrt in die Gegenrichtung
+  assert.ok(near(back.mx, -1)); assert.ok(near(back.o.x, far.o.x), "inside the ring the centre stays");
+});

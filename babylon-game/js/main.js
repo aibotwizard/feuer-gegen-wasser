@@ -1,6 +1,6 @@
-// Spielschleife, Tastatur und Ablauf: Titel -> Level -> gewonnen / Leben verloren -> ... -> Spiel vorbei.
+// Spielschleife, Tastatur, Finger und Ablauf: Titel -> Level -> gewonnen / Leben verloren -> ... -> Spiel vorbei.
 (function (FW) {
-  const sim = FW.sim, CFG = FW.CFG, stage = FW.stage, sprites = FW.sprites, fx = FW.fx, audio = FW.audio, hud = FW.hud;
+  const sim = FW.sim, CFG = FW.CFG, stage = FW.stage, sprites = FW.sprites, fx = FW.fx, audio = FW.audio, hud = FW.hud, touch = FW.touch;
   const $ = id => document.getElementById(id);
   const load = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } };
   const save = (k, v) => { if (G.auto) return; try { localStorage.setItem(k, String(v)); } catch (_) {} };   // Tests speichern nichts
@@ -24,13 +24,15 @@
   window.addEventListener("keydown", e => {
     if (e.metaKey || e.ctrlKey || e.altKey) { keys.clear(); return; }
     if (G.auto) return;                                    // automatischer Test läuft: Tastatur ignorieren
-    audio.unlock();
+    audio.unlock(); touch.setMode(false);
     if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
     if (!e.repeat) command(e.code);
     keys.add(e.code);
   });
   window.addEventListener("keyup", e => keys.delete(e.code));
-  window.addEventListener("blur", () => { keys.clear(); if (G.state === "play" && !G.auto) pause(true); });
+  const away = () => { keys.clear(); touch.release(); if (G.state === "play" && !G.auto) pause(true); };
+  window.addEventListener("blur", away);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) away(); });   // Handy: App oder Tab gewechselt
 
   function command(code) {
     if (code === "KeyF") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); return; }
@@ -38,12 +40,15 @@
     if (code === "KeyP" || code === "Escape") { if (G.state === "play") pause(true); else if (G.state === "pause") pause(false); return; }
     if (code === "KeyR" && (G.state === "play" || G.state === "pause")) { restart(); return; }
     if (code === "Space" && G.state === "play") { G.jump = true; return; }           // springen
-    if (code === "Space" || code === "Enter") {
-      if (G.state === "title" || G.state === "over") startRun();
-      else if (G.state === "pause") pause(false);
-      else if ((G.state === "won" || G.state === "lost") && G.since > 0.7 && G.next) proceed();
-    }
+    if (code === "Space" || code === "Enter") advance();
   }
+  // Leertaste oder Tipper außerhalb des Spiels: starten, Pause beenden, nach einem Banner weiter
+  function advance() {
+    if (G.state === "title" || G.state === "over") startRun();
+    else if (G.state === "pause") pause(false);
+    else if ((G.state === "won" || G.state === "lost") && G.since > 0.7 && G.next) proceed();
+  }
+  const press = () => touch.on ? "Tippen" : "Leertaste";   // womit es weitergeht, je nach Steuerung
   function proceed() { const f = G.next; G.next = null; G.wait = 0; if (f) f(); }
   function later(seconds, f) { G.wait = seconds; G.since = 0; G.next = f; }
 
@@ -83,7 +88,7 @@
     audio.play("won"); if (extra) audio.play("life");
     const parts = [`Zeit ${res.time.toFixed(1).replace(".", ",")} s (Ziel ${res.par} s)`, `+${hud.fmt(res.total)} Punkte`];
     if (res.maxCombo > 1) parts.push("Kombo ×" + res.maxCombo); if (extra) parts.push("+1 Leben");
-    hud.banner("win", "Level geschafft!", parts.join(" · "), { stars: res.stars, note: "Leertaste: weiter" });
+    hud.banner("win", "Level geschafft!", parts.join(" · "), { stars: res.stars, note: press() + ": weiter" });
     updateBest();
     later(7, () => { r.level++; r.attempt = 1; startLevel(); });
   }
@@ -92,7 +97,7 @@
     G.state = "lost"; G.timeScale = 0.5; stage.focus(w.fire.x, w.fire.y, 1.22); audio.play("lost");
     const title = reason === "doused" ? "Gelöscht!" : "Letzter Baum verbrannt!";
     const why = reason === "doused" ? "Das Wasser hat dich erwischt." : "Nur Bäume können Wasser trinken.";
-    if (r.lives > 0) { hud.banner("lose", title, `${why} Noch ${r.lives} Leben.`, { note: "Leertaste: noch mal" }); later(5, () => { r.attempt++; startLevel(); }); }
+    if (r.lives > 0) { hud.banner("lose", title, `${why} Noch ${r.lives} Leben.`, { note: press() + ": noch mal" }); later(5, () => { r.attempt++; startLevel(); }); }
     else { hud.banner("lose", title, why); later(2.4, gameOver); }
   }
   function updateBest() {
@@ -151,7 +156,8 @@
       let dt = real * G.timeScale;
       if (G.freeze > 0) { G.freeze -= real; dt = 0; }                                // kurzer Stillstand bei einem Treffer
       if ((G.state === "play" || G.state === "title") && !over(G.world)) {
-        const w = G.world, input = G.demo || G.pilot ? pilot(w) : { mx: (held("right") ? 1 : 0) - (held("left") ? 1 : 0), my: (held("up") ? 1 : 0) - (held("down") ? 1 : 0), jump: G.jump };
+        const w = G.world, t = touch.vector();          // Tastatur und Finger zusammen; die Regeln begrenzen die Länge auf 1
+        const input = G.demo || G.pilot ? pilot(w) : { mx: (held("right") ? 1 : 0) - (held("left") ? 1 : 0) + t.mx, my: (held("up") ? 1 : 0) - (held("down") ? 1 : 0) + t.my, jump: G.jump };
         G.acc += dt;
         for (let n = 0; G.acc >= sim.DT && n < 12 && !over(w); n++) { sim.step(w, input); G.acc -= sim.DT; input.jump = G.jump = false; }
         if (G.acc > sim.DT) G.acc = 0;
@@ -159,6 +165,7 @@
       }
       if (G.next) { G.since += real; if ((G.wait -= real) <= 0) proceed(); }
       const w = G.world, playing = G.state === "play" && !G.demo;
+      if (!playing) touch.release();
       sprites.sync(w, G.time, real * (G.freeze > 0 ? 0.15 : G.timeScale));
       fx.frame(dt, w, G.state !== "over");
       // Hinweis in Level 1 und Schild über dem letzten Baum
@@ -184,6 +191,10 @@
     stage.init(canvas);
     await stage.loadKinds();
     fx.init(); hud.init();
+    touch.init({ playing: () => G.state === "play" && !G.demo, tap: advance, wake: audio.unlock });
+    const button = (id, code) => $(id).addEventListener("click", () => { audio.unlock(); command(code); });
+    button("pauseBtn", "KeyP"); button("resumeBtn", "KeyP"); button("restartBtn", "KeyR"); button("soundBtn", "KeyM");
+    hud.muted(audio.muted);
     stage.fitCamera(); window.addEventListener("resize", () => { stage.applyResolution(stage.lowRes); stage.engine.resize(); stage.fitCamera(); });
     showTitle();
     stage.scene.onBeforeRenderObservable.add(() => frame(Math.min(stage.engine.getDeltaTime() / 1000, 0.05)));

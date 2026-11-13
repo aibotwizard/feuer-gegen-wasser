@@ -31,7 +31,8 @@
     groundMat = new BABYLON.StandardMaterial("groundMat", scene);
     groundMat.disableLighting = true; groundMat.emissiveColor = BABYLON.Color3.White(); groundMat.specularColor = BABYLON.Color3.Black();
     ground.material = groundMat;
-    const k = Math.max(1, Math.min(3, Math.floor(Math.min(engine.getCaps().maxTextureSize || 4096, 8192) / GW)));
+    const coarse = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);   // Handy oder Tablet: kleinere Wiesen-Textur
+    const k = Math.max(1, Math.min(coarse ? 2 : 3, Math.floor(Math.min(engine.getCaps().maxTextureSize || 4096, 8192) / GW)));
     const tex = new BABYLON.DynamicTexture("grass", { width: GW * k, height: GH * k }, scene, true, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
     drawGround(tex.getContext(), k); tex.update(true); tex.anisotropicFilteringLevel = 16;
     groundMat.diffuseTexture = tex;
