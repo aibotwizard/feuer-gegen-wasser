@@ -53,9 +53,13 @@
   hud.arrow = function (a, b) {
     $("arrow").classList.toggle("on", !!a); if (!a) return;
     const p = stage.toScreen(a.x, a.y), q = stage.toScreen(b.x, b.y), dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
-    const sx = p.x + ux * 34, sy = p.y + uy * 34, ex = q.x - ux * 52, ey = q.y - uy * 52;
-    $("arrowLine").setAttribute("d", `M${sx} ${sy} L${ex} ${ey}`);
-    $("arrowHead").setAttribute("points", `${ex + ux * 16},${ey + uy * 16} ${ex - uy * 10},${ey + ux * 10} ${ex + uy * 10},${ey - ux * 10}`);
+    // k: auf kleinen Bildschirmen schrumpft der Pfeil mit den Figuren (1 = Größe am Computer)
+    const k = Math.min(1, (stage.toScreen(1, 0).x - stage.toScreen(0, 0).x) / 1.2);
+    const sx = p.x + ux * 34 * k, sy = p.y + uy * 34 * k, ex = q.x - ux * 52 * k, ey = q.y - uy * 52 * k, line = $("arrowLine");
+    line.setAttribute("d", `M${sx} ${sy} L${ex} ${ey}`);
+    line.setAttribute("pathLength", Math.max(1, Math.hypot(ex - sx, ey - sy) / k));   // so schrumpfen auch die Striche, und sie laufen weiter gleichmäßig
+    line.style.strokeWidth = 4 * k;
+    $("arrowHead").setAttribute("points", `${ex + ux * 16 * k},${ey + uy * 16 * k} ${ex - uy * 10 * k},${ey + ux * 10 * k} ${ex + uy * 10 * k},${ey - ux * 10 * k}`);
   };
   // Schild über dem letzten Baum
   hud.lastTree = function (pos) {
